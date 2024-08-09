@@ -144,3 +144,121 @@ impl Ord for BigUint {
         }
     }
 }
+
+macro_rules! impl_shr_and_shl {
+    ($type: ty) => {
+        impl Shr<$type> for BigUint {
+            type Output = Self;
+
+            fn shr(self, rhs: $type) -> Self::Output {
+                match rhs.cmp(&8) {
+                    Ordering::Equal => {
+                        let mut result = BigUint::none();
+
+                        for i in self.value.into_iter().skip(1) {
+                            result.push(i);
+                        }
+
+                        result
+                    }
+                    Ordering::Less => {
+                        let mut result = BigUint::none();
+
+                        let mut next = 0;
+                        for i in self.value {
+                            result.push((i >> rhs) + next);
+                            next = (i - ((i >> rhs) << rhs)) << (8 - rhs);
+                        }
+
+                        result
+                    }
+                    _ => self >> 8 as $type >> (rhs - 8),
+                }
+            }
+        }
+
+        impl Shl<$type> for BigUint {
+            type Output = Self;
+
+            fn shl(self, rhs: $type) -> Self::Output {
+                let mut result = self;
+
+                for _ in 0..rhs.div_ceil(8) {
+                    result.push(0);
+                }
+
+                result >> (8 - (rhs % 8))
+            }
+        }
+    };
+}
+
+impl_shr_and_shl!(usize);
+
+impl_shr_and_shl!(u8);
+
+impl_shr_and_shl!(u16);
+
+impl_shr_and_shl!(u32);
+
+impl_shr_and_shl!(u64);
+
+impl_shr_and_shl!(u128);
+
+#[cfg(test)]
+mod tests {
+    #[allow(unused_imports)]
+    use super::*;
+
+    macro_rules! dbg_biguint {
+        ($i: expr) => {
+            eprint!("{} = ", stringify!($i));
+            for i in &$i.value {
+                eprint!("{:0>8b} ", i);
+            }
+            eprintln!();
+        };
+    }
+
+    #[test]
+    fn shift_right() {
+        let bigint = BigUint::from(!0u32);
+
+        let result = bigint.clone() >> 3usize;
+
+        dbg_biguint!(result);
+
+        let result = bigint.clone() >> 8usize;
+
+        dbg_biguint!(result);
+
+        let result = bigint.clone() >> 10usize;
+
+        dbg_biguint!(result);
+
+        let result = bigint.clone() >> 20usize;
+
+        dbg_biguint!(result);
+    }
+
+    #[test]
+    fn shift_left() {
+        let bigint = BigUint::from(!0u32);
+
+        let result = bigint.clone() << 3usize;
+
+        dbg_biguint!(result);
+
+        let result = bigint.clone() << 8usize;
+
+        dbg_biguint!(result);
+
+        let result = bigint.clone() << 10usize;
+
+        dbg_biguint!(result);
+
+        let result = bigint.clone() << 20usize;
+
+        dbg_biguint!(result);
+    }
+}
