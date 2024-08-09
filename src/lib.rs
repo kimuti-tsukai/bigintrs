@@ -1,7 +1,10 @@
 use std::{
     borrow::Borrow,
     cmp::{self, Ordering},
-    ops::{Add, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Shl, Shr, Sub},
+    ops::{
+        Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Shl, Shr,
+        Sub, SubAssign,
+    },
     slice::SliceIndex,
 };
 
@@ -254,6 +257,62 @@ impl_shr_and_shl!(u32);
 impl_shr_and_shl!(u64);
 
 impl_shr_and_shl!(u128);
+
+impl Add for BigUint {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        let xor = &self ^ &rhs;
+
+        let carry = (&self & &rhs) << 1u8;
+
+        if carry == BigUint::from(0u8) {
+            xor
+        } else {
+            xor + carry
+        }
+    }
+}
+
+impl Sub for BigUint {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        if self < rhs {
+            panic!("attempt to subtract with overflow");
+        }
+
+        let xor = &self ^ &rhs;
+
+        let carry = &(&self ^ &rhs) & &rhs;
+
+        if carry == BigUint::from(0u8) {
+            xor
+        } else {
+            xor.sub(carry)
+        }
+    }
+}
+
+impl_for_ref!(Add, add);
+
+impl_for_ref!(Sub, sub);
+
+impl AddAssign for BigUint {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = self.clone() + rhs;
+    }
+}
+
+impl SubAssign for BigUint {
+    fn sub_assign(&mut self, rhs: Self) {
+        *self = self.clone() - rhs;
+    }
+}
+
+impl_assign_for_ref!(AddAssign, add_assign);
+
+impl_assign_for_ref!(SubAssign, sub_assign);
 
 #[cfg(test)]
 mod tests {
