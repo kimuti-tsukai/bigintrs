@@ -1,7 +1,7 @@
 use std::{
     borrow::Borrow,
     cmp::{self, Ordering},
-    ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Shl, Shr},
+    ops::{Add, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Shl, Shr, Sub},
     slice::SliceIndex,
 };
 
@@ -79,6 +79,28 @@ impl Borrow<Vec<u8>> for BigUint {
     }
 }
 
+macro_rules! impl_for_ref {
+    ($trait: ty, $method: ident) => {
+        impl $trait for &BigUint {
+            type Output = BigUint;
+
+            fn $method(self, rhs: Self) -> Self::Output {
+                self.clone().$method(rhs.clone())
+            }
+        }
+    };
+}
+
+macro_rules! impl_assign_for_ref {
+    ($trait: tt, $method: ident) => {
+        impl $trait<&Self> for BigUint {
+            fn $method(&mut self, rhs: &Self) {
+                self.$method(rhs.clone())
+            }
+        }
+    };
+}
+
 macro_rules! impl_bit_ops {
     ($trait:ty, $method:ident, $op:tt) => {
         impl $trait for BigUint {
@@ -103,6 +125,12 @@ impl_bit_ops!(BitOr, bitor, |);
 
 impl_bit_ops!(BitXor, bitxor, ^);
 
+impl_for_ref!(BitAnd, bitand);
+
+impl_for_ref!(BitOr, bitor);
+
+impl_for_ref!(BitXor, bitxor);
+
 macro_rules! impl_bit_assign_ops {
     ($trait:ty, $method:ident, $op: tt) => {
         impl $trait for BigUint {
@@ -120,6 +148,12 @@ impl_bit_assign_ops!(BitAndAssign, bitand_assign, &);
 impl_bit_assign_ops!(BitOrAssign, bitor_assign, |);
 
 impl_bit_assign_ops!(BitXorAssign, bitxor_assign, ^);
+
+impl_assign_for_ref!(BitAndAssign, bitand_assign);
+
+impl_assign_for_ref!(BitOrAssign, bitor_assign);
+
+impl_assign_for_ref!(BitXorAssign, bitxor_assign);
 
 impl PartialOrd for BigUint {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
@@ -188,6 +222,22 @@ macro_rules! impl_shr_and_shl {
                 }
 
                 result >> (8 - (rhs % 8))
+            }
+        }
+
+        impl Shr<$type> for &BigUint {
+            type Output = BigUint;
+
+            fn shr(self, rhs: $type) -> Self::Output {
+                self.clone() >> rhs
+            }
+        }
+
+        impl Shl<$type> for &BigUint {
+            type Output = BigUint;
+
+            fn shl(self, rhs: $type) -> Self::Output {
+                self.clone() << rhs
             }
         }
     };
