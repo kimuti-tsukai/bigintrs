@@ -1,7 +1,7 @@
 use std::{
     borrow::Borrow,
-    cmp,
-    ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign},
+    cmp::{self, Ordering},
+    ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Shl, Shr},
     slice::SliceIndex,
 };
 
@@ -12,11 +12,11 @@ pub struct BigUint {
 
 impl BigUint {
     pub fn new() -> Self {
-        BigUint { value: Vec::new() }
+        BigUint { value: vec![0] }
     }
 
-    fn new_with_bytes(b: usize) -> Self {
-        BigUint { value: vec![0; b] }
+    fn none() -> Self {
+        BigUint { value: Vec::new() }
     }
 
     fn push(&mut self, value: u8) {
@@ -34,6 +34,38 @@ impl BigUint {
         self.value.get_mut(index)
     }
 }
+
+impl From<u8> for BigUint {
+    fn from(value: u8) -> Self {
+        BigUint { value: vec![value] }
+    }
+}
+
+macro_rules! impl_from_primitive {
+    ($type: ty) => {
+        impl From<$type> for BigUint {
+            fn from(value: $type) -> BigUint {
+                let mut result = BigUint::none();
+
+                for i in value.to_be_bytes() {
+                    result.push(i);
+                }
+
+                result
+            }
+        }
+    };
+}
+
+impl_from_primitive!(u16);
+
+impl_from_primitive!(u32);
+
+impl_from_primitive!(u64);
+
+impl_from_primitive!(u128);
+
+impl_from_primitive!(usize);
 
 impl AsRef<Vec<u8>> for BigUint {
     fn as_ref(&self) -> &Vec<u8> {
@@ -53,7 +85,7 @@ macro_rules! impl_bit_ops {
             type Output = Self;
 
             fn $method(self, rhs: Self) -> Self::Output {
-                let mut new = BigUint::new();
+                let mut new = BigUint::none();
 
                 for i in 0..cmp::max(self.value.len(), rhs.value.len()) {
                     new.push(self.get(i).unwrap_or(&0) $op rhs.get(i).unwrap_or(&0));
@@ -89,8 +121,26 @@ impl_bit_assign_ops!(BitOrAssign, bitor_assign, |);
 
 impl_bit_assign_ops!(BitXorAssign, bitxor_assign, ^);
 
-#[cfg(test)]
-mod tests {
-    #[allow(unused_imports)]
-    use super::*;
+impl PartialOrd for BigUint {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for BigUint {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.value.len().cmp(&other.value.len()) {
+            Ordering::Equal => {
+                for (s, o) in self.value.iter().zip(other.value.iter()) {
+                    match s.cmp(o) {
+                        Ordering::Equal => {}
+                        order => return order,
+                    }
+                }
+
+                Ordering::Equal
+            }
+            order => order,
+        }
+    }
 }
