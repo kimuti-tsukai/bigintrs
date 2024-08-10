@@ -1,8 +1,12 @@
 use std::{
-    borrow::Borrow, cmp::{self, Ordering}, num::IntErrorKind, ops::{
+    borrow::Borrow,
+    cmp::{self, Ordering},
+    num::IntErrorKind,
+    ops::{
         Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Shl, Shr,
         Sub, SubAssign,
-    }, slice::SliceIndex
+    },
+    slice::SliceIndex,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Default, Hash)]
@@ -198,9 +202,20 @@ macro_rules! impl_shr_and_shl {
                     Ordering::Less => {
                         let mut result = BigUint::none();
 
+
+                        let mut is_firstloop = true;
                         let mut next = 0;
                         for i in self.value {
-                            result.push((i >> rhs) + next);
+                            if is_firstloop {
+                                if i >> rhs != 0 {
+                                    result.push(i >> rhs);
+                                }
+
+                                is_firstloop = false;
+                            } else {
+                                result.push((i >> rhs) + next);
+                            }
+
                             next = (i - ((i >> rhs) << rhs)) << (8 - rhs);
                         }
 
@@ -345,6 +360,12 @@ mod tests {
         let result = bigint.clone() >> 20usize;
 
         dbg_biguint!(result);
+
+        let bigint = BigUint::from(0b00001111_11111111u16);
+
+        let result = bigint.clone() >> 6u8;
+
+        dbg_biguint!(result);
     }
 
     #[test]
@@ -364,6 +385,12 @@ mod tests {
         dbg_biguint!(result);
 
         let result = bigint.clone() << 20usize;
+
+        dbg_biguint!(result);
+
+        let bigint = BigUint::from(0b00001111_11111111u16);
+
+        let result = bigint.clone() << 2u8;
 
         dbg_biguint!(result);
     }
