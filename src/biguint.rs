@@ -193,7 +193,9 @@ macro_rules! impl_shr_and_shl {
                     Ordering::Equal => {
                         let mut result = BigUint::none();
 
-                        for i in self.value.into_iter().skip(1) {
+                        let mut it = self.value.into_iter();
+                        it.next_back();
+                        for i in it {
                             result.push(i);
                         }
 
@@ -364,6 +366,10 @@ mod tests {
         let bigint = BigUint::from(0b00001111_11111111u16);
 
         let result = bigint.clone() >> 6u8;
+
+        dbg_biguint!(result);
+
+        let result = bigint.clone() >> 8u8;
 
         dbg_biguint!(result);
     }
