@@ -721,6 +721,14 @@ impl_bit_assign_ops!(DivAssign, div_assign, /);
 
 impl_assign_for_ref!(DivAssign, div_assign);
 
+impl FromStr for BigUint {
+    type Err = IntErrorKind;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        BigUint::from_str_radix(s, 10)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #[allow(unused_imports)]
