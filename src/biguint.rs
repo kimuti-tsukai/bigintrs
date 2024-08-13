@@ -53,7 +53,7 @@ impl_cast_unsigned!(
     (isize, usize)
 );
 
-#[derive(Clone, Debug, PartialEq, Eq, Default, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct BigUint {
     value: Vec<u8>,
 }
@@ -813,6 +813,12 @@ impl Display for BigUint {
         let write = chars.into_iter().rev().collect::<String>();
 
         write!(f, "{}", write)
+    }
+}
+
+impl Default for BigUint {
+    fn default() -> Self {
+        BigUint::new()
     }
 }
 
