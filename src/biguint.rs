@@ -3,8 +3,10 @@ use std::{
     cmp::{self, Ordering},
     num::IntErrorKind,
     ops::{
-        Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Div, DivAssign, Mul, MulAssign, Rem, RemAssign, Shl, ShlAssign, Shr, ShrAssign, Sub, SubAssign
-    }, str::FromStr,
+        Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Div,
+        DivAssign, Mul, MulAssign, Rem, RemAssign, Shl, ShlAssign, Shr, ShrAssign, Sub, SubAssign,
+    },
+    str::FromStr,
 };
 
 #[allow(unused_macros)]
@@ -151,22 +153,23 @@ impl BigUint {
 
     pub fn from_str_radix(src: &str, radix: u32) -> Result<Self, IntErrorKind> {
         if !(2..=36).contains(&radix) {
-            panic!("from_str_radix_int: must lie in the range `[2, 36]` - found {}", radix);
+            panic!(
+                "from_str_radix_int: must lie in the range `[2, 36]` - found {}",
+                radix
+            );
         }
 
         if src.is_empty() {
-            return Err(IntErrorKind::Empty)
+            return Err(IntErrorKind::Empty);
         }
 
         let src = src.as_bytes();
 
-        let (is_positive, mut digits) =  match src {
-            [b'+' | b'-'] => {
-                return Err(IntErrorKind::InvalidDigit)
-            }
+        let (is_positive, mut digits) = match src {
+            [b'+' | b'-'] => return Err(IntErrorKind::InvalidDigit),
             [b'+', rest @ ..] => (true, rest),
             [b'-', rest @ ..] => (false, rest),
-            _ => (true, src)
+            _ => (true, src),
         };
 
         if !is_positive {
@@ -983,6 +986,41 @@ mod tests {
         assert_eq!(
             BigUint::from(123456789012345678900u128) / BigUint::from(10u8),
             BigUint::from(12345678901234567890u64)
+        );
+    }
+
+    #[test]
+    fn remainder() {
+        assert_eq!(BigUint::from(100u8) % BigUint::from(2u8), BigUint::zero());
+
+        assert_eq!(
+            BigUint::from(100000u32) % BigUint::from(1000u16),
+            BigUint::from(0u8)
+        );
+
+        assert_eq!(
+            BigUint::from(83810205u32) % BigUint::from(6789u16),
+            BigUint::zero()
+        );
+
+        assert_eq!(
+            BigUint::from(121932631112635269u64) % BigUint::from(123456789u32),
+            BigUint::zero()
+        );
+
+        assert_eq!(
+            BigUint::from(100u8) % BigUint::from(3u8),
+            BigUint::from(1u8)
+        );
+
+        assert_eq!(
+            BigUint::from(0u8) % BigUint::from(123456u32),
+            BigUint::zero()
+        );
+
+        assert_eq!(
+            BigUint::from(12345678901234567890u64) % BigUint::from(10u8),
+            BigUint::zero()
         );
     }
 
