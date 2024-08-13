@@ -3,8 +3,7 @@ use std::{
     cmp::{self, Ordering},
     num::IntErrorKind,
     ops::{
-        Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Shl, Shr,
-        Sub, SubAssign,
+        Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Div, Mul, MulAssign, Shl, ShlAssign, Shr, ShrAssign, Sub, SubAssign
     },
 };
 
@@ -17,11 +16,6 @@ macro_rules! dbg_biguint {
         }
         eprintln!();
     };
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Default, Hash)]
-pub struct BigUint {
-    value: Vec<u8>,
 }
 
 trait CastUnsigned {
@@ -56,12 +50,98 @@ impl_cast_unsigned!(
     (isize, usize)
 );
 
+#[derive(Clone, Debug, PartialEq, Eq, Default, Hash)]
+pub struct BigUint {
+    value: Vec<u8>,
+}
+
 impl BigUint {
     pub fn new() -> Self {
         BigUint { value: vec![0] }
     }
 
-    fn none() -> Self {
+    pub fn zero() -> Self {
+        BigUint::new()
+    }
+
+    pub fn one() -> Self {
+        BigUint::from(1u8)
+    }
+
+    pub fn bits(&self) -> usize {
+        self.value.len() * 8
+    }
+
+    pub fn valid_bits(&self) -> usize {
+        let mut first_bits = 7;
+
+        let first = self.value.first().unwrap();
+
+        while first_bits != 0 && first >> first_bits & 1 == 0 {
+            first_bits -= 1;
+        }
+
+        self.bits() + first_bits - 7
+    }
+
+    pub fn count_ones(&self) -> usize {
+        let mut result = 0;
+
+        for i in &self.value {
+            result += i.count_ones() as usize;
+        }
+
+        result
+    }
+
+    pub fn long_mul(self, mut rhs: Self) -> Self {
+        let mut result = BigUint::new();
+
+        for i in 0..rhs.bits() {
+            if rhs.value.last().unwrap() & 1 == 1 {
+                result += &self << i;
+            }
+
+            rhs >>= 1u8;
+        }
+
+        result
+    }
+
+    pub fn karatsuba_mul(self, rhs: BigUint) -> Self {
+        self._karatsuba_mul(&rhs)
+    }
+
+    fn _karatsuba_mul(&self, other: &BigUint) -> Self {
+        let n = self.value.len().max(other.value.len());
+
+        if n <= 32 {
+            return self.clone().long_mul(other.clone());
+        }
+
+        let m = n / 2;
+
+        let (x1, x0) = self.split(m);
+        let (y1, y0) = other.split(m);
+
+        let z2 = x1._karatsuba_mul(&y1);
+        let z0 = x0._karatsuba_mul(&y0);
+        let z1 = (x1 + x0)._karatsuba_mul(&(y1 + y0)) - &z2 - &z0;
+
+        (z2 << (2 * m * 8)) + (z1 << (m * 8)) + z0
+    }
+
+    fn split(&self, mid: usize) -> (BigUint, BigUint) {
+        let low_part = BigUint {
+            value: self.value[..mid].to_vec(),
+        };
+        let high_part = BigUint {
+            value: self.value[mid..].to_vec(),
+        };
+        (low_part, high_part)
+    }
+
+    const fn none() -> Self {
         BigUint { value: Vec::new() }
     }
 
@@ -314,6 +394,10 @@ macro_rules! impl_shr_and_shl_unsigned {
             type Output = Self;
 
             fn shr(self, rhs: $type) -> Self::Output {
+                if self.valid_bits() as $type <= rhs {
+                    return BigUint::new();
+                }
+
                 match rhs.cmp(&8) {
                     Ordering::Equal => {
                         let mut result = BigUint::none();
@@ -385,6 +469,18 @@ macro_rules! impl_shr_and_shl_unsigned {
                 self.clone() << rhs
             }
         }
+
+        impl ShrAssign<$type> for BigUint {
+            fn shr_assign(&mut self, rhs: $type) {
+                *self = self.clone() >> rhs;
+            }
+        }
+
+        impl ShlAssign<$type> for BigUint {
+            fn shl_assign(&mut self, rhs: $type) {
+                *self = self.clone() << rhs;
+            }
+        }
     };
     ($($type: ty),+) => {
         $(
@@ -402,7 +498,7 @@ macro_rules! impl_shr_and_shl_signed {
 
             fn shr(self, rhs: $type) -> Self::Output {
                 if rhs < 0 {
-                    panic!("attempt to arithmetic overflow");
+                    panic!("attempt to shift right with overflow");
                 }
 
                 self >> rhs.my_cast_unsigned()
@@ -414,7 +510,7 @@ macro_rules! impl_shr_and_shl_signed {
 
             fn shl(self, rhs: $type) -> Self::Output {
                 if rhs < 0 {
-                    panic!("attempt to arithmetic overflow");
+                    panic!("attempt to shift left with overflow");
                 }
 
                 self << rhs.my_cast_unsigned()
@@ -434,6 +530,26 @@ macro_rules! impl_shr_and_shl_signed {
 
             fn shl(self, rhs: $type) -> Self::Output {
                 self.clone() << rhs
+            }
+        }
+
+        impl ShrAssign<$type> for BigUint {
+            fn shr_assign(&mut self, rhs: $type) {
+                if rhs < 0 {
+                    panic!("attempt to shift right with overflow");
+                }
+
+                *self >>= rhs.my_cast_unsigned();
+            }
+        }
+
+        impl ShlAssign<$type> for BigUint {
+            fn shl_assign(&mut self, rhs: $type) {
+                if rhs < 0 {
+                    panic!("attempt to shift left with overflow");
+                }
+
+                *self <<= rhs.my_cast_unsigned();
             }
         }
     };
@@ -472,11 +588,7 @@ impl Sub for BigUint {
 
         let xor = &self ^ &rhs;
 
-        dbg_biguint!(xor);
-
         let carry = ((&self ^ &rhs) & &rhs) << 1u8;
-
-        dbg_biguint!(carry);
 
         if carry == BigUint::from(0u8) {
             xor
@@ -518,10 +630,36 @@ impl_assign_for_ref!(
     SubAssign, sub_assign
 );
 
+impl Mul for BigUint {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        self.karatsuba_mul(rhs)
+    }
+}
+
+impl_for_ref_to_ref!(Mul, mul);
+
+impl_for_owned_to_ref!(Mul, mul);
+
+impl_for_ref_to_owned!(Mul, mul);
+
+impl_bit_assign_ops!(MulAssign, mul_assign, *);
+
+impl_assign_for_ref!(MulAssign, mul_assign);
+
 #[cfg(test)]
 mod tests {
     #[allow(unused_imports)]
     use super::*;
+
+    #[test]
+    fn valid_bits() {
+        assert_eq!(
+            BigUint::from(0b_00000000_00000011_11111100_00000000_u32).valid_bits(),
+            18
+        )
+    }
 
     #[test]
     fn bit_and() {
@@ -565,6 +703,11 @@ mod tests {
     #[test]
     fn shift_right() {
         assert_eq!(
+            BigUint::from(0b_00000001_u8) >> 1u8,
+            BigUint::from(0b_00000000_u8)
+        );
+
+        assert_eq!(
             BigUint::from(0b_00001111_11110000_u16),
             BigUint::from(0b_01111111_10000000_u16) >> 3u8
         );
@@ -590,8 +733,13 @@ mod tests {
         );
 
         assert_eq!(
-            BigUint::from(0b_00001111_11110000_u16) << 18u8,
-            BigUint::from(0b_00111111_11000000_00000000_00000000_u32)
+            BigUint::from(0b_00001111_11110000_u16),
+            BigUint::from(0b_00111111_11000000_00000000_00000000_u32) >> 18u8
+        );
+
+        assert_eq!(
+            BigUint::from(0b_00001111_11110000_u16) >> 30,
+            BigUint::zero()
         );
     }
 
@@ -678,5 +826,35 @@ mod tests {
             BigUint::from(531u16) - BigUint::from(260u16),
             BigUint::from(271u16)
         );
+    }
+
+    #[test]
+    fn multiple() {
+        assert_eq!(
+            BigUint::from(12u8) * BigUint::from(11u8),
+            BigUint::from(132u8)
+        );
+
+        assert_eq!(
+            BigUint::from(100u8) * BigUint::from(1000u16),
+            BigUint::from(100000u32)
+        );
+
+        assert_eq!(
+            BigUint::from(12345u16) * BigUint::from(6789u16),
+            BigUint::from(83810205u32)
+        );
+
+        assert_eq!(
+            BigUint::from(987654321u32) * BigUint::from(123456789u32),
+            BigUint::from(121932631112635269u64)
+        );
+
+        assert_eq!(
+            BigUint::from(0u8) * BigUint::from(123456u32),
+            BigUint::from(0u8)
+        );
+
+        assert_eq!(BigUint::from(1u8) * BigUint::from(1u8), BigUint::from(1u8));
     }
 }
