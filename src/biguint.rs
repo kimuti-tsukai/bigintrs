@@ -1,8 +1,13 @@
 use std::{
-    borrow::Borrow, cmp::{self, Ordering}, fmt::Display, num::IntErrorKind, ops::{
+    borrow::{Borrow, BorrowMut},
+    cmp::{self, Ordering},
+    fmt::Display,
+    num::IntErrorKind,
+    ops::{
         Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Div,
         DivAssign, Mul, MulAssign, Rem, RemAssign, Shl, ShlAssign, Shr, ShrAssign, Sub, SubAssign,
-    }, str::FromStr
+    },
+    str::FromStr,
 };
 
 #[allow(unused_macros)]
@@ -239,15 +244,39 @@ macro_rules! impl_try_from_signed_int {
 
 impl_try_from_signed_int!(i8, i16, i32, i64, i128, isize);
 
-impl AsRef<Vec<u8>> for BigUint {
-    fn as_ref(&self) -> &Vec<u8> {
-        &self.value
+impl<T> AsRef<T> for BigUint
+where
+    Vec<u8>: AsRef<T>,
+{
+    fn as_ref(&self) -> &T {
+        self.value.as_ref()
     }
 }
 
-impl Borrow<Vec<u8>> for BigUint {
-    fn borrow(&self) -> &Vec<u8> {
-        &self.value
+impl<T> AsMut<T> for BigUint
+where
+    Vec<u8>: AsMut<T>,
+{
+    fn as_mut(&mut self) -> &mut T {
+        self.value.as_mut()
+    }
+}
+
+impl<T> Borrow<T> for BigUint
+where
+    Vec<u8>: Borrow<T>,
+{
+    fn borrow(&self) -> &T {
+        self.value.borrow()
+    }
+}
+
+impl<T> BorrowMut<T> for BigUint
+where
+    Vec<u8>: BorrowMut<T>,
+{
+    fn borrow_mut(&mut self) -> &mut T {
+        self.value.borrow_mut()
     }
 }
 
@@ -752,21 +781,19 @@ impl Display for BigUint {
         let mut src = self.clone();
 
         while src != BigUint::zero() {
-            chars.push(
-                match &src % BigUint::from(10u8) {
-                    _ if src == BigUint::from(0u8) => '0',
-                    _ if src == BigUint::from(1u8) => '1',
-                    _ if src == BigUint::from(2u8) => '2',
-                    _ if src == BigUint::from(3u8) => '3',
-                    _ if src == BigUint::from(4u8) => '4',
-                    _ if src == BigUint::from(5u8) => '5',
-                    _ if src == BigUint::from(6u8) => '6',
-                    _ if src == BigUint::from(7u8) => '7',
-                    _ if src == BigUint::from(8u8) => '8',
-                    _ if src == BigUint::from(9u8) => '9',
-                    _ => unreachable!()
-                }
-            );
+            chars.push(match &src % BigUint::from(10u8) {
+                _ if src == BigUint::from(0u8) => '0',
+                _ if src == BigUint::from(1u8) => '1',
+                _ if src == BigUint::from(2u8) => '2',
+                _ if src == BigUint::from(3u8) => '3',
+                _ if src == BigUint::from(4u8) => '4',
+                _ if src == BigUint::from(5u8) => '5',
+                _ if src == BigUint::from(6u8) => '6',
+                _ if src == BigUint::from(7u8) => '7',
+                _ if src == BigUint::from(8u8) => '8',
+                _ if src == BigUint::from(9u8) => '9',
+                _ => unreachable!(),
+            });
 
             src /= BigUint::from(10u8);
         }
