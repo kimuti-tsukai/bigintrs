@@ -67,8 +67,24 @@ impl BigUint {
         BigUint::new()
     }
 
+    pub fn is_zero(&self) -> bool {
+        *self == BigUint::zero()
+    }
+
+    pub fn set_zero(&mut self) {
+        *self = BigUint::zero()
+    }
+
     pub fn one() -> Self {
         BigUint::from(1u8)
+    }
+
+    pub fn is_one(&self) -> bool {
+        *self == BigUint::one()
+    }
+
+    pub fn set_one(&mut self) {
+        *self = BigUint::one()
     }
 
     pub fn bits(&self) -> usize {
@@ -190,6 +206,22 @@ impl BigUint {
 
         Ok(result)
     }
+
+    pub fn div_ceil(self, rhs: BigUint) -> Self {
+        if &self % &rhs == BigUint::zero() {
+            self / rhs
+        } else {
+            self / rhs + BigUint::one()
+        }
+    }
+
+    pub fn increment(&mut self) {
+        *self += BigUint::one();
+    }
+
+    pub fn decrement(&mut self) {
+        *self -= BigUint::one();
+    }
 }
 
 impl From<u8> for BigUint {
@@ -243,6 +275,18 @@ macro_rules! impl_try_from_signed_int {
 }
 
 impl_try_from_signed_int!(i8, i16, i32, i64, i128, isize);
+
+impl TryFrom<BigUint> for u8 {
+    type Error = IntErrorKind;
+
+    fn try_from(value: BigUint) -> Result<Self, Self::Error> {
+        if value.value.len() > 1 {
+            Err(IntErrorKind::PosOverflow)
+        } else {
+            Ok(*value.value.first().unwrap())
+        }
+    }
+}
 
 impl AsRef<Self> for BigUint {
     fn as_ref(&self) -> &Self {
@@ -569,6 +613,90 @@ macro_rules! impl_shr_and_shl_unsigned {
 
 impl_shr_and_shl_unsigned!(usize, u8, u16, u32, u64, u128);
 
+impl Shr for BigUint {
+    type Output = Self;
+
+    fn shr(self, rhs: Self) -> Self::Output {
+        if BigUint::from(self.valid_bits()) <= rhs {
+            return BigUint::new();
+        }
+
+        match rhs.cmp(&BigUint::from(8u8)) {
+            Ordering::Equal => {
+                let mut result = BigUint::none();
+
+                let mut it = self.value.into_iter();
+                it.next_back();
+                for i in it {
+                    result.push(i);
+                }
+
+                result
+            }
+            Ordering::Less => {
+                let mut result = BigUint::none();
+
+                let rhs: u8 = rhs.try_into().unwrap();
+
+                let mut is_firstloop = true;
+                let mut next = 0;
+                for i in self.value {
+                    if is_firstloop {
+                        if i >> rhs != 0 {
+                            result.push(i >> rhs);
+                        }
+
+                        is_firstloop = false;
+                    } else {
+                        result.push((i >> rhs) + next);
+                    }
+
+                    next = (i - ((i >> rhs) << rhs)) << (8 - rhs);
+                }
+
+                result
+            }
+            _ => self >> 8u8 >> (rhs - BigUint::from(8u8)),
+        }
+    }
+}
+
+impl Shl for BigUint {
+    type Output = Self;
+
+    fn shl(self, rhs: Self) -> Self::Output {
+        let mut result = self;
+
+        let mut counter = rhs.clone().div_ceil(BigUint::from(8u8));
+        while counter > BigUint::zero() {
+            result.push(0);
+
+            counter.decrement();
+        }
+
+        if (&rhs % BigUint::from(8u8)).is_zero() {
+            result
+        } else {
+            result >> (8u8 - u8::try_from(rhs % BigUint::from(8u8)).unwrap())
+        }
+    }
+}
+
+impl_for_ref_to_ref!(
+    Shr, shr;
+    Shl, shl
+);
+
+impl_for_owned_to_ref!(
+    Shr, shr;
+    Shl, shl
+);
+
+impl_for_ref_to_owned!(
+    Shr, shr;
+    Shl, shl
+);
+
 macro_rules! impl_shr_and_shl_signed {
     ($type: ty) => {
         impl Shr<$type> for BigUint {
@@ -812,7 +940,15 @@ impl Display for BigUint {
 
         let write = chars.into_iter().rev().collect::<String>();
 
-        write!(f, "{}", if write.is_empty() { String::from("0") } else { write })
+        write!(
+            f,
+            "{}",
+            if write.is_empty() {
+                String::from("0")
+            } else {
+                write
+            }
+        )
     }
 }
 
