@@ -3,7 +3,8 @@ use std::{
     cmp::{self, Ordering},
     num::IntErrorKind,
     ops::{
-        Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Div, Mul, MulAssign, Shl, ShlAssign, Shr, ShrAssign, Sub, SubAssign
+        Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Div,
+        DivAssign, Mul, MulAssign, Shl, ShlAssign, Shr, ShrAssign, Sub, SubAssign,
     },
 };
 
@@ -648,6 +649,40 @@ impl_bit_assign_ops!(MulAssign, mul_assign, *);
 
 impl_assign_for_ref!(MulAssign, mul_assign);
 
+impl Div for BigUint {
+    type Output = Self;
+
+    fn div(mut self, rhs: Self) -> Self::Output {
+        let mut result = BigUint::zero();
+
+        while self >= rhs {
+            let mut add = BigUint::one();
+            let mut sub = rhs.clone();
+
+            while self >= sub {
+                self -= &sub;
+
+                result += &add;
+
+                sub *= BigUint::from(2u8);
+                add *= BigUint::from(2u8);
+            }
+        }
+
+        result
+    }
+}
+
+impl_for_ref_to_ref!(Div, div);
+
+impl_for_owned_to_ref!(Div, div);
+
+impl_for_ref_to_owned!(Div, div);
+
+impl_bit_assign_ops!(DivAssign, div_assign, /);
+
+impl_assign_for_ref!(DivAssign, div_assign);
+
 #[cfg(test)]
 mod tests {
     #[allow(unused_imports)]
@@ -856,5 +891,35 @@ mod tests {
         );
 
         assert_eq!(BigUint::from(1u8) * BigUint::from(1u8), BigUint::from(1u8));
+    }
+
+    #[test]
+    fn divide() {
+        assert_eq!(
+            BigUint::from(100000u32) / BigUint::from(1000u16),
+            BigUint::from(100u8)
+        );
+
+        assert_eq!(
+            BigUint::from(83810205u32) / BigUint::from(6789u16),
+            BigUint::from(12345u16)
+        );
+
+        assert_eq!(
+            BigUint::from(121932631112635269u64) / BigUint::from(123456789u32),
+            BigUint::from(987654321u32)
+        );
+
+        assert_eq!(
+            BigUint::from(0u8) / BigUint::from(123456u32),
+            BigUint::from(0u8)
+        );
+
+        assert_eq!(BigUint::from(1u8) / BigUint::from(1u8), BigUint::from(1u8));
+
+        assert_eq!(
+            BigUint::from(123456789012345678900u128) / BigUint::from(10u8),
+            BigUint::from(12345678901234567890u64)
+        );
     }
 }
