@@ -3,8 +3,7 @@ use std::{
     cmp::{self, Ordering},
     num::IntErrorKind,
     ops::{
-        Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Div,
-        DivAssign, Mul, MulAssign, Shl, ShlAssign, Shr, ShrAssign, Sub, SubAssign,
+        Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Div, DivAssign, Mul, MulAssign, Rem, RemAssign, Shl, ShlAssign, Shr, ShrAssign, Sub, SubAssign
     }, str::FromStr,
 };
 
@@ -720,6 +719,24 @@ impl_for_ref_to_owned!(Div, div);
 impl_bit_assign_ops!(DivAssign, div_assign, /);
 
 impl_assign_for_ref!(DivAssign, div_assign);
+
+impl Rem for BigUint {
+    type Output = Self;
+
+    fn rem(self, rhs: Self) -> Self::Output {
+        &self - (&rhs * (&self / &rhs))
+    }
+}
+
+impl_for_ref_to_ref!(Rem, rem);
+
+impl_for_owned_to_ref!(Rem, rem);
+
+impl_for_ref_to_owned!(Rem, rem);
+
+impl_bit_assign_ops!(RemAssign, rem_assign, %);
+
+impl_assign_for_ref!(RemAssign, rem_assign);
 
 impl FromStr for BigUint {
     type Err = IntErrorKind;
