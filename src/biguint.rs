@@ -5,7 +5,7 @@ use std::{
     ops::{
         Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Div,
         DivAssign, Mul, MulAssign, Shl, ShlAssign, Shr, ShrAssign, Sub, SubAssign,
-    },
+    }, str::FromStr,
 };
 
 #[allow(unused_macros)]
@@ -148,6 +148,44 @@ impl BigUint {
 
     fn push(&mut self, value: u8) {
         self.value.push(value)
+    }
+
+    pub fn from_str_radix(src: &str, radix: u32) -> Result<Self, IntErrorKind> {
+        if !(2..=36).contains(&radix) {
+            panic!("from_str_radix_int: must lie in the range `[2, 36]` - found {}", radix);
+        }
+
+        if src.is_empty() {
+            return Err(IntErrorKind::Empty)
+        }
+
+        let src = src.as_bytes();
+
+        let (is_positive, mut digits) =  match src {
+            [b'+' | b'-'] => {
+                return Err(IntErrorKind::InvalidDigit)
+            }
+            [b'+', rest @ ..] => (true, rest),
+            [b'-', rest @ ..] => (false, rest),
+            _ => (true, src)
+        };
+
+        if !is_positive {
+            return Err(IntErrorKind::NegOverflow);
+        }
+
+        let mut result = BigUint::zero();
+
+        while let [c, rest @ ..] = digits {
+            result *= BigUint::from(radix);
+            let Some(x) = (*c as char).to_digit(radix) else {
+                return Err(IntErrorKind::InvalidDigit);
+            };
+            result += BigUint::from(x);
+            digits = rest;
+        }
+
+        Ok(result)
     }
 }
 
@@ -920,6 +958,19 @@ mod tests {
         assert_eq!(
             BigUint::from(123456789012345678900u128) / BigUint::from(10u8),
             BigUint::from(12345678901234567890u64)
+        );
+    }
+
+    #[test]
+    fn from_str_radix() {
+        assert_eq!(
+            BigUint::from_str_radix("123", 10).unwrap(),
+            BigUint::from(123u8)
+        );
+
+        assert_eq!(
+            BigUint::from_str_radix("1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", 2).unwrap(),
+            BigUint::from(1u8) << (64 * 3)
         );
     }
 }
