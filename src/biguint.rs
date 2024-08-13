@@ -1,12 +1,8 @@
 use std::{
-    borrow::Borrow,
-    cmp::{self, Ordering},
-    num::IntErrorKind,
-    ops::{
+    borrow::Borrow, cmp::{self, Ordering}, fmt::Display, num::IntErrorKind, ops::{
         Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Div,
         DivAssign, Mul, MulAssign, Rem, RemAssign, Shl, ShlAssign, Shr, ShrAssign, Sub, SubAssign,
-    },
-    str::FromStr,
+    }, str::FromStr
 };
 
 #[allow(unused_macros)]
@@ -746,6 +742,38 @@ impl FromStr for BigUint {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         BigUint::from_str_radix(s, 10)
+    }
+}
+
+impl Display for BigUint {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut chars = Vec::new();
+
+        let mut src = self.clone();
+
+        while src != BigUint::zero() {
+            chars.push(
+                match &src % BigUint::from(10u8) {
+                    _ if src == BigUint::from(0u8) => '0',
+                    _ if src == BigUint::from(1u8) => '1',
+                    _ if src == BigUint::from(2u8) => '2',
+                    _ if src == BigUint::from(3u8) => '3',
+                    _ if src == BigUint::from(4u8) => '4',
+                    _ if src == BigUint::from(5u8) => '5',
+                    _ if src == BigUint::from(6u8) => '6',
+                    _ if src == BigUint::from(7u8) => '7',
+                    _ if src == BigUint::from(8u8) => '8',
+                    _ if src == BigUint::from(9u8) => '9',
+                    _ => unreachable!()
+                }
+            );
+
+            src /= BigUint::from(10u8);
+        }
+
+        let write = chars.into_iter().rev().collect::<String>();
+
+        write!(f, "{}", write)
     }
 }
 
