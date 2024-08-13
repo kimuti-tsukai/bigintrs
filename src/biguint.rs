@@ -794,16 +794,16 @@ impl Display for BigUint {
 
         while src != BigUint::zero() {
             chars.push(match &src % BigUint::from(10u8) {
-                _ if src == BigUint::from(0u8) => '0',
-                _ if src == BigUint::from(1u8) => '1',
-                _ if src == BigUint::from(2u8) => '2',
-                _ if src == BigUint::from(3u8) => '3',
-                _ if src == BigUint::from(4u8) => '4',
-                _ if src == BigUint::from(5u8) => '5',
-                _ if src == BigUint::from(6u8) => '6',
-                _ if src == BigUint::from(7u8) => '7',
-                _ if src == BigUint::from(8u8) => '8',
-                _ if src == BigUint::from(9u8) => '9',
+                src if src == BigUint::from(0u8) => '0',
+                src if src == BigUint::from(1u8) => '1',
+                src if src == BigUint::from(2u8) => '2',
+                src if src == BigUint::from(3u8) => '3',
+                src if src == BigUint::from(4u8) => '4',
+                src if src == BigUint::from(5u8) => '5',
+                src if src == BigUint::from(6u8) => '6',
+                src if src == BigUint::from(7u8) => '7',
+                src if src == BigUint::from(8u8) => '8',
+                src if src == BigUint::from(9u8) => '9',
                 _ => unreachable!(),
             });
 
@@ -812,7 +812,7 @@ impl Display for BigUint {
 
         let write = chars.into_iter().rev().collect::<String>();
 
-        write!(f, "{}", write)
+        write!(f, "{}", if write.is_empty() { String::from("0") } else { write })
     }
 }
 
@@ -1107,6 +1107,32 @@ mod tests {
         assert_eq!(
             BigUint::from_str_radix("1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", 2).unwrap(),
             BigUint::from(1u8) << (64 * 3)
+        );
+    }
+
+    #[test]
+    fn display() {
+        assert_eq!(BigUint::from(102u8).to_string(), String::from("102"));
+
+        assert_eq!(BigUint::from(100000u32).to_string(), String::from("100000"));
+
+        assert_eq!(
+            BigUint::from(83810205u32).to_string(),
+            String::from("83810205")
+        );
+
+        assert_eq!(
+            BigUint::from(121932631112635269u64).to_string(),
+            String::from("121932631112635269")
+        );
+
+        assert_eq!(BigUint::from(0u8).to_string(), String::from("0"));
+
+        assert_eq!(BigUint::from(1u8).to_string(), String::from("1"));
+
+        assert_eq!(
+            BigUint::from(12345678901234567890u64).to_string(),
+            String::from("12345678901234567890")
         );
     }
 }
