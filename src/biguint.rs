@@ -244,6 +244,18 @@ macro_rules! impl_try_from_signed_int {
 
 impl_try_from_signed_int!(i8, i16, i32, i64, i128, isize);
 
+impl AsRef<Self> for BigUint {
+    fn as_ref(&self) -> &Self {
+        self
+    }
+}
+
+impl AsMut<Self> for BigUint {
+    fn as_mut(&mut self) -> &mut Self {
+        self
+    }
+}
+
 impl<T> AsRef<T> for BigUint
 where
     Vec<u8>: AsRef<T>,
