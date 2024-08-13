@@ -6,13 +6,55 @@ use std::{
         Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Shl, Shr,
         Sub, SubAssign,
     },
-    slice::SliceIndex,
 };
+
+#[allow(unused_macros)]
+macro_rules! dbg_biguint {
+    ($i: expr) => {
+        eprint!("[ {} ] = ", stringify!($i));
+        for i in &$i.value {
+            eprint!("{:0>8b} ", i);
+        }
+        eprintln!();
+    };
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, Default, Hash)]
 pub struct BigUint {
     value: Vec<u8>,
 }
+
+trait CastUnsigned {
+    type Output;
+
+    fn my_cast_unsigned(self) -> Self::Output;
+}
+
+macro_rules! impl_cast_unsigned {
+    ($from: ty, $to: ty) => {
+        impl CastUnsigned for $from {
+            type Output = $to;
+
+            fn my_cast_unsigned(self) -> Self::Output {
+                self as $to
+            }
+        }
+    };
+    ($(($from: ty, $to: ty)),+) => {
+        $(
+            impl_cast_unsigned!($from, $to);
+        )+
+    }
+}
+
+impl_cast_unsigned!(
+    (i8, u8),
+    (i16, u16),
+    (i32, u32),
+    (i64, u64),
+    (i128, u128),
+    (isize, usize)
+);
 
 impl BigUint {
     pub fn new() -> Self {
@@ -25,17 +67,6 @@ impl BigUint {
 
     fn push(&mut self, value: u8) {
         self.value.push(value)
-    }
-
-    fn get<I: SliceIndex<[u8]>>(&self, index: I) -> Option<&<I as SliceIndex<[u8]>>::Output> {
-        self.value.get(index)
-    }
-
-    fn get_mut<I: SliceIndex<[u8]>>(
-        &mut self,
-        index: I,
-    ) -> Option<&mut <I as SliceIndex<[u8]>>::Output> {
-        self.value.get_mut(index)
     }
 }
 
@@ -51,7 +82,7 @@ macro_rules! impl_from_unsigned_int {
             fn from(value: $type) -> BigUint {
                 let mut result = BigUint::none();
 
-                for i in value.to_be_bytes() {
+                for i in value.to_be_bytes().into_iter().skip_while(|v| v == &0) {
                     result.push(i);
                 }
 
@@ -59,17 +90,37 @@ macro_rules! impl_from_unsigned_int {
             }
         }
     };
+    ($($type: ty),+) => {
+        $(
+            impl_from_unsigned_int!($type);
+        )+
+    };
 }
 
-impl_from_unsigned_int!(u16);
+impl_from_unsigned_int!(u16, u32, u64, u128, usize);
 
-impl_from_unsigned_int!(u32);
+macro_rules! impl_try_from_signed_int {
+    ($type: ty) => {
+        impl TryFrom<$type> for BigUint {
+            type Error = IntErrorKind;
 
-impl_from_unsigned_int!(u64);
+            fn try_from(value: $type) -> Result<Self, Self::Error> {
+                if value < 0 {
+                    return Err(IntErrorKind::NegOverflow);
+                }
 
-impl_from_unsigned_int!(u128);
+                Ok(BigUint::from(value.my_cast_unsigned()))
+            }
+        }
+    };
+    ($($type: ty),+) => {
+        $(
+            impl_try_from_signed_int!($type);
+        )+
+    };
+}
 
-impl_from_unsigned_int!(usize);
+impl_try_from_signed_int!(i8, i16, i32, i64, i128, isize);
 
 impl AsRef<Vec<u8>> for BigUint {
     fn as_ref(&self) -> &Vec<u8> {
@@ -83,7 +134,7 @@ impl Borrow<Vec<u8>> for BigUint {
     }
 }
 
-macro_rules! impl_for_ref {
+macro_rules! impl_for_ref_to_ref {
     ($trait: ty, $method: ident) => {
         impl $trait for &BigUint {
             type Output = BigUint;
@@ -92,6 +143,45 @@ macro_rules! impl_for_ref {
                 self.clone().$method(rhs.clone())
             }
         }
+    };
+    ($($trait: ty, $method: ident);+) => {
+        $(
+            impl_for_ref_to_ref!($trait, $method);
+        )+
+    };
+}
+
+macro_rules! impl_for_owned_to_ref {
+    ($trait: tt, $method: ident) => {
+        impl $trait<&Self> for BigUint {
+            type Output = BigUint;
+
+            fn $method(self, rhs: &Self) -> Self::Output {
+                self.$method(rhs.clone())
+            }
+        }
+    };
+    ($($trait: tt, $method: ident);+) => {
+        $(
+            impl_for_owned_to_ref!($trait, $method);
+        )+
+    };
+}
+
+macro_rules! impl_for_ref_to_owned {
+    ($trait: tt, $method: ident) => {
+        impl $trait<BigUint> for &BigUint {
+            type Output = BigUint;
+
+            fn $method(self, rhs: BigUint) -> Self::Output {
+                self.clone().$method(rhs)
+            }
+        }
+    };
+    ($($trait: tt, $method: ident);+) => {
+        $(
+            impl_for_ref_to_owned!($trait, $method);
+        )+
     };
 }
 
@@ -103,6 +193,11 @@ macro_rules! impl_assign_for_ref {
             }
         }
     };
+    ($($trait: tt, $method: ident);+) => {
+        $(
+            impl_assign_for_ref!($trait, $method);
+        )+
+    };
 }
 
 macro_rules! impl_bit_ops {
@@ -110,30 +205,55 @@ macro_rules! impl_bit_ops {
         impl $trait for BigUint {
             type Output = Self;
 
-            fn $method(self, rhs: Self) -> Self::Output {
-                let mut new = BigUint::none();
+            fn $method(mut self, mut rhs: Self) -> Self::Output {
+                let mut new = Vec::new();
 
-                for i in 0..cmp::max(self.value.len(), rhs.value.len()) {
-                    new.push(self.get(i).unwrap_or(&0) $op rhs.get(i).unwrap_or(&0));
+                for _ in 0..cmp::max(self.value.len(), rhs.value.len()) {
+                    let push = self.value.pop().unwrap_or_default() $op rhs.value.pop().unwrap_or_default();
+
+                    new.push(push);
                 }
 
-                new
+                let mut result: Vec<u8> = new.into_iter().rev().skip_while(|v| v == &0).collect();
+
+                if result.is_empty() {
+                    result.push(0);
+                }
+
+                BigUint { value: result }
             }
         }
     };
+    ($($trait: ty, $method: ident, $op: tt);+) => {
+        $(
+            impl_bit_ops!($trait, $method, $op);
+        )+
+    };
 }
 
-impl_bit_ops!(BitAnd, bitand, &);
+impl_bit_ops!(
+    BitAnd, bitand, &;
+    BitOr, bitor, |;
+    BitXor, bitxor, ^
+);
 
-impl_bit_ops!(BitOr, bitor, |);
+impl_for_ref_to_ref!(
+    BitAnd, bitand;
+    BitOr, bitor;
+    BitXor, bitxor
+);
 
-impl_bit_ops!(BitXor, bitxor, ^);
+impl_for_owned_to_ref!(
+    BitAnd, bitand;
+    BitOr, bitor;
+    BitXor, bitxor
+);
 
-impl_for_ref!(BitAnd, bitand);
-
-impl_for_ref!(BitOr, bitor);
-
-impl_for_ref!(BitXor, bitxor);
+impl_for_ref_to_owned!(
+    BitAnd, bitand;
+    BitOr, bitor;
+    BitXor, bitxor
+);
 
 macro_rules! impl_bit_assign_ops {
     ($trait:ty, $method:ident, $op: tt) => {
@@ -145,19 +265,24 @@ macro_rules! impl_bit_assign_ops {
             }
         }
     };
+    ($($trait: ty, $method: ident, $op: tt);+) => {
+        $(
+            impl_bit_assign_ops!($trait, $method, $op);
+        )+
+    };
 }
 
-impl_bit_assign_ops!(BitAndAssign, bitand_assign, &);
+impl_bit_assign_ops!(
+    BitAndAssign, bitand_assign, &;
+    BitOrAssign, bitor_assign, |;
+    BitXorAssign, bitxor_assign, ^
+);
 
-impl_bit_assign_ops!(BitOrAssign, bitor_assign, |);
-
-impl_bit_assign_ops!(BitXorAssign, bitxor_assign, ^);
-
-impl_assign_for_ref!(BitAndAssign, bitand_assign);
-
-impl_assign_for_ref!(BitOrAssign, bitor_assign);
-
-impl_assign_for_ref!(BitXorAssign, bitxor_assign);
+impl_assign_for_ref!(
+    BitAndAssign, bitand_assign;
+    BitOrAssign, bitor_assign;
+    BitXorAssign, bitxor_assign
+);
 
 impl PartialOrd for BigUint {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
@@ -183,7 +308,7 @@ impl Ord for BigUint {
     }
 }
 
-macro_rules! impl_shr_and_shl {
+macro_rules! impl_shr_and_shl_unsigned {
     ($type: ty) => {
         impl Shr<$type> for BigUint {
             type Output = Self;
@@ -203,7 +328,6 @@ macro_rules! impl_shr_and_shl {
                     }
                     Ordering::Less => {
                         let mut result = BigUint::none();
-
 
                         let mut is_firstloop = true;
                         let mut next = 0;
@@ -238,7 +362,11 @@ macro_rules! impl_shr_and_shl {
                     result.push(0);
                 }
 
-                result >> (8 - (rhs % 8))
+                if rhs % 8 == 0 {
+                    result
+                } else {
+                    result >> (8 - (rhs % 8))
+                }
             }
         }
 
@@ -258,19 +386,65 @@ macro_rules! impl_shr_and_shl {
             }
         }
     };
+    ($($type: ty),+) => {
+        $(
+            impl_shr_and_shl_unsigned!($type);
+        )+
+    };
 }
 
-impl_shr_and_shl!(usize);
+impl_shr_and_shl_unsigned!(usize, u8, u16, u32, u64, u128);
 
-impl_shr_and_shl!(u8);
+macro_rules! impl_shr_and_shl_signed {
+    ($type: ty) => {
+        impl Shr<$type> for BigUint {
+            type Output = Self;
 
-impl_shr_and_shl!(u16);
+            fn shr(self, rhs: $type) -> Self::Output {
+                if rhs < 0 {
+                    panic!("attempt to arithmetic overflow");
+                }
 
-impl_shr_and_shl!(u32);
+                self >> rhs.my_cast_unsigned()
+            }
+        }
 
-impl_shr_and_shl!(u64);
+        impl Shl<$type> for BigUint {
+            type Output = Self;
 
-impl_shr_and_shl!(u128);
+            fn shl(self, rhs: $type) -> Self::Output {
+                if rhs < 0 {
+                    panic!("attempt to arithmetic overflow");
+                }
+
+                self << rhs.my_cast_unsigned()
+            }
+        }
+
+        impl Shr<$type> for &BigUint {
+            type Output = BigUint;
+
+            fn shr(self, rhs: $type) -> Self::Output {
+                self.clone() >> rhs
+            }
+        }
+
+        impl Shl<$type> for &BigUint {
+            type Output = BigUint;
+
+            fn shl(self, rhs: $type) -> Self::Output {
+                self.clone() << rhs
+            }
+        }
+    };
+    ($($type: ty),+) => {
+        $(
+            impl_shr_and_shl_signed!($type);
+        )+
+    };
+}
+
+impl_shr_and_shl_signed!(i8, i16, i32, i64, i128, isize);
 
 impl Add for BigUint {
     type Output = Self;
@@ -298,7 +472,11 @@ impl Sub for BigUint {
 
         let xor = &self ^ &rhs;
 
-        let carry = &(&self ^ &rhs) & &rhs;
+        dbg_biguint!(xor);
+
+        let carry = ((&self ^ &rhs) & &rhs) << 1u8;
+
+        dbg_biguint!(carry);
 
         if carry == BigUint::from(0u8) {
             xor
@@ -308,9 +486,20 @@ impl Sub for BigUint {
     }
 }
 
-impl_for_ref!(Add, add);
+impl_for_ref_to_ref!(
+    Add, add;
+    Sub, sub
+);
 
-impl_for_ref!(Sub, sub);
+impl_for_owned_to_ref!(
+    Add, add;
+    Sub, sub
+);
+
+impl_for_ref_to_owned!(
+    Add, add;
+    Sub, sub
+);
 
 impl AddAssign for BigUint {
     fn add_assign(&mut self, rhs: Self) {
@@ -324,80 +513,170 @@ impl SubAssign for BigUint {
     }
 }
 
-impl_assign_for_ref!(AddAssign, add_assign);
-
-impl_assign_for_ref!(SubAssign, sub_assign);
+impl_assign_for_ref!(
+    AddAssign, add_assign;
+    SubAssign, sub_assign
+);
 
 #[cfg(test)]
 mod tests {
     #[allow(unused_imports)]
     use super::*;
 
-    macro_rules! dbg_biguint {
-        ($i: expr) => {
-            eprint!("{} = ", stringify!($i));
-            for i in &$i.value {
-                eprint!("{:0>8b} ", i);
-            }
-            eprintln!();
-        };
+    #[test]
+    fn bit_and() {
+        assert_eq!(
+            BigUint::from(0b_11001100_u8) & BigUint::from(0b_10001110_u8),
+            BigUint::from(0b_10001100_u8)
+        );
+
+        assert_eq!(
+            BigUint::from(0b_11001100_u8) & BigUint::from(0b_11010111_10001110_u16),
+            BigUint::from(0b_10001100_u8)
+        );
+    }
+
+    #[test]
+    fn bit_or() {
+        assert_eq!(
+            BigUint::from(0b_11001100_u8) | BigUint::from(0b_10001110_u8),
+            BigUint::from(0b_11001110_u8)
+        );
+
+        assert_eq!(
+            BigUint::from(0b_11001100_u8) | BigUint::from(0b_11010111_10001110_u16),
+            BigUint::from(0b_11010111_11001110_u16)
+        );
+    }
+
+    #[test]
+    fn bit_xor() {
+        assert_eq!(
+            BigUint::from(0b_11001100_u8) ^ BigUint::from(0b_10001110_u8),
+            BigUint::from(0b_01000010_u8)
+        );
+
+        assert_eq!(
+            BigUint::from(0b_11001100_u8) ^ BigUint::from(0b_11010111_10001110_u16),
+            BigUint::from(0b_11010111_01000010_u16)
+        );
     }
 
     #[test]
     fn shift_right() {
-        let bigint = BigUint::from(!0u32);
+        assert_eq!(
+            BigUint::from(0b_00001111_11110000_u16),
+            BigUint::from(0b_01111111_10000000_u16) >> 3u8
+        );
 
-        let result = bigint.clone() >> 3usize;
+        assert_eq!(
+            BigUint::from(0b_00001111_11110000_u16),
+            BigUint::from(0b_00000000_00000011_11111100_00000000_u32) >> 6u8
+        );
 
-        dbg_biguint!(result);
+        assert_eq!(
+            BigUint::from(0b_00001111_11110000_u16),
+            BigUint::from(0b_00000000_00001111_11110000_00000000_u32) >> 8u8
+        );
 
-        let result = bigint.clone() >> 8usize;
+        assert_eq!(
+            BigUint::from(0b_00001111_11110000_u16),
+            BigUint::from(0b_00000011_11111100_00000000_00000000_u32) >> 14u8
+        );
 
-        dbg_biguint!(result);
+        assert_eq!(
+            BigUint::from(0b_00001111_11110000_u16),
+            BigUint::from(0b_00001111_11110000_00000000_00000000_u32) >> 16u8
+        );
 
-        let result = bigint.clone() >> 10usize;
-
-        dbg_biguint!(result);
-
-        let result = bigint.clone() >> 20usize;
-
-        dbg_biguint!(result);
-
-        let bigint = BigUint::from(0b00001111_11111111u16);
-
-        let result = bigint.clone() >> 6u8;
-
-        dbg_biguint!(result);
-
-        let result = bigint.clone() >> 8u8;
-
-        dbg_biguint!(result);
+        assert_eq!(
+            BigUint::from(0b_00001111_11110000_u16) << 18u8,
+            BigUint::from(0b_00111111_11000000_00000000_00000000_u32)
+        );
     }
 
     #[test]
     fn shift_left() {
-        let bigint = BigUint::from(!0u32);
+        assert_eq!(
+            BigUint::from(0b_00001111_11110000_u16) << 3u8,
+            BigUint::from(0b_01111111_10000000_u16)
+        );
 
-        let result = bigint.clone() << 3usize;
+        assert_eq!(
+            BigUint::from(0b_00001111_11110000_u16) << 6u8,
+            BigUint::from(0b_00000000_00000011_11111100_00000000_u32)
+        );
 
-        dbg_biguint!(result);
+        assert_eq!(
+            BigUint::from(0b_00001111_11110000_u16) << 8u8,
+            BigUint::from(0b_00000000_00001111_11110000_00000000_u32)
+        );
 
-        let result = bigint.clone() << 8usize;
+        assert_eq!(
+            BigUint::from(0b_00001111_11110000_u16) << 14u8,
+            BigUint::from(0b_00000011_11111100_00000000_00000000_u32)
+        );
 
-        dbg_biguint!(result);
+        assert_eq!(
+            BigUint::from(0b_00001111_11110000_u16) << 16u8,
+            BigUint::from(0b_00001111_11110000_00000000_00000000_u32)
+        );
 
-        let result = bigint.clone() << 10usize;
+        assert_eq!(
+            BigUint::from(0b_00001111_11110000_u16) << 18u8,
+            BigUint::from(0b_00111111_11000000_00000000_00000000_u32)
+        );
+    }
 
-        dbg_biguint!(result);
+    #[test]
+    fn ordering() {
+        assert!(BigUint::from(100u8) > BigUint::from(30u8));
 
-        let result = bigint.clone() << 20usize;
+        assert!(BigUint::from(890u32) > BigUint::from(30u8));
 
-        dbg_biguint!(result);
+        assert!(BigUint::from(54u8) < BigUint::from(891u32));
+    }
 
-        let bigint = BigUint::from(0b00001111_11111111u16);
+    #[test]
+    fn add() {
+        assert_eq!(BigUint::from(8u8) + BigUint::from(3u8), BigUint::from(11u8));
 
-        let result = bigint.clone() << 2u8;
+        assert_eq!(
+            BigUint::from(11u8) + BigUint::from(3u8),
+            BigUint::from(14u8)
+        );
 
-        dbg_biguint!(result);
+        assert_eq!(
+            BigUint::from(11u8) + BigUint::from(25u8),
+            BigUint::from(36u8)
+        );
+
+        assert_eq!(
+            BigUint::from(37u8) + BigUint::from(183u8),
+            BigUint::from(220u8)
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "attempt to subtract with overflow")]
+    fn overflow_subtract() {
+        let a = BigUint::from(891u32);
+        let b = BigUint::from(54u8);
+        let _ = b - a;
+    }
+
+    #[test]
+    fn subtract() {
+        assert_eq!(BigUint::from(8u8) - BigUint::from(3u8), BigUint::from(5u8));
+
+        assert_eq!(
+            BigUint::from(531u16) - BigUint::from(238u8),
+            BigUint::from(293u16)
+        );
+
+        assert_eq!(
+            BigUint::from(531u16) - BigUint::from(260u16),
+            BigUint::from(271u16)
+        );
     }
 }
