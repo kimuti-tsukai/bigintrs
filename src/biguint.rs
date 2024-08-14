@@ -68,7 +68,7 @@ impl BigUint {
     }
 
     pub fn is_zero(&self) -> bool {
-        *self == BigUint::zero()
+        *self == BigUint::from(0u8)
     }
 
     pub fn set_zero(&mut self) {
@@ -208,7 +208,7 @@ impl BigUint {
     }
 
     pub fn div_ceil(self, rhs: BigUint) -> Self {
-        if &self % &rhs == BigUint::zero() {
+        if (&self % &rhs).is_zero() {
             self / rhs
         } else {
             self / rhs + BigUint::one()
@@ -776,7 +776,7 @@ impl Add for BigUint {
 
         let carry = (&self & &rhs) << 1u8;
 
-        if carry == BigUint::from(0u8) {
+        if carry.is_zero() {
             xor
         } else {
             xor + carry
@@ -796,7 +796,7 @@ impl Sub for BigUint {
 
         let carry = ((&self ^ &rhs) & &rhs) << 1u8;
 
-        if carry == BigUint::from(0u8) {
+        if carry.is_zero() {
             xor
         } else {
             xor.sub(carry)
@@ -869,8 +869,8 @@ impl Div for BigUint {
 
                 result += &add;
 
-                sub *= BigUint::from(2u8);
-                add *= BigUint::from(2u8);
+                sub <<= 1u8;
+                add <<= 1u8;
             }
         }
 
@@ -922,7 +922,7 @@ impl Display for BigUint {
 
         while src != BigUint::zero() {
             chars.push(match &src % BigUint::from(10u8) {
-                src if src == BigUint::from(0u8) => '0',
+                src if src.is_zero() => '0',
                 src if src == BigUint::from(1u8) => '1',
                 src if src == BigUint::from(2u8) => '2',
                 src if src == BigUint::from(3u8) => '3',
@@ -1160,10 +1160,7 @@ mod tests {
             BigUint::from(121932631112635269u64)
         );
 
-        assert_eq!(
-            BigUint::from(0u8) * BigUint::from(123456u32),
-            BigUint::from(0u8)
-        );
+        assert_eq!(BigUint::zero() * BigUint::from(123456u32), BigUint::zero());
 
         assert_eq!(BigUint::from(1u8) * BigUint::from(1u8), BigUint::from(1u8));
 
@@ -1190,10 +1187,7 @@ mod tests {
             BigUint::from(987654321u32)
         );
 
-        assert_eq!(
-            BigUint::from(0u8) / BigUint::from(123456u32),
-            BigUint::from(0u8)
-        );
+        assert_eq!(BigUint::zero() / BigUint::from(123456u32), BigUint::zero());
 
         assert_eq!(BigUint::from(1u8) / BigUint::from(1u8), BigUint::from(1u8));
 
@@ -1214,7 +1208,7 @@ mod tests {
 
         assert_eq!(
             BigUint::from(100000u32) % BigUint::from(1000u16),
-            BigUint::from(0u8)
+            BigUint::zero()
         );
 
         assert_eq!(
@@ -1232,10 +1226,7 @@ mod tests {
             BigUint::from(1u8)
         );
 
-        assert_eq!(
-            BigUint::from(0u8) % BigUint::from(123456u32),
-            BigUint::zero()
-        );
+        assert_eq!(BigUint::zero() % BigUint::from(123456u32), BigUint::zero());
 
         assert_eq!(
             BigUint::from(12345678901234567890u64) % BigUint::from(10u8),
@@ -1277,7 +1268,7 @@ mod tests {
             String::from("121932631112635269")
         );
 
-        assert_eq!(BigUint::from(0u8).to_string(), String::from("0"));
+        assert_eq!(BigUint::zero().to_string(), String::from("0"));
 
         assert_eq!(BigUint::from(1u8).to_string(), String::from("1"));
 
