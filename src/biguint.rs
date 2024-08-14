@@ -1020,16 +1020,16 @@ impl Display for BigUint {
 
         while src != BigUint::zero() {
             chars.push(match &src % BigUint::from(10u8) {
-                src if src.is_zero() => '0',
-                src if src == BigUint::from(1u8) => '1',
-                src if src == BigUint::from(2u8) => '2',
-                src if src == BigUint::from(3u8) => '3',
-                src if src == BigUint::from(4u8) => '4',
-                src if src == BigUint::from(5u8) => '5',
-                src if src == BigUint::from(6u8) => '6',
-                src if src == BigUint::from(7u8) => '7',
-                src if src == BigUint::from(8u8) => '8',
-                src if src == BigUint::from(9u8) => '9',
+                c if c.is_zero() => '0',
+                c if c == BigUint::from(1u8) => '1',
+                c if c == BigUint::from(2u8) => '2',
+                c if c == BigUint::from(3u8) => '3',
+                c if c == BigUint::from(4u8) => '4',
+                c if c == BigUint::from(5u8) => '5',
+                c if c == BigUint::from(6u8) => '6',
+                c if c == BigUint::from(7u8) => '7',
+                c if c == BigUint::from(8u8) => '8',
+                c if c == BigUint::from(9u8) => '9',
                 _ => unreachable!(),
             });
 
