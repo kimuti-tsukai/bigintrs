@@ -63,6 +63,10 @@ impl BigUint {
         BigUint { value: vec![0] }
     }
 
+    pub fn min_value() -> Self {
+        BigUint::zero()
+    }
+
     pub fn zero() -> Self {
         BigUint::new()
     }
@@ -87,8 +91,12 @@ impl BigUint {
         *self = BigUint::one()
     }
 
+    pub fn bytes(&self) -> usize {
+        self.value.len()
+    }
+
     pub fn bits(&self) -> usize {
-        self.value.len() * 8
+        self.bytes() * 8
     }
 
     pub fn valid_bits(&self) -> usize {
@@ -311,7 +319,7 @@ impl BigUint {
         Some(self << rhs)
     }
 
-    pub fn swap_bytes(self) -> Self {
+    fn swap_bytes(self) -> Self {
         BigUint {
             value: self.value.into_iter().rev().skip_while(|v| *v == 0).collect()
         }
@@ -397,6 +405,61 @@ impl BigUint {
         } else {
             self.to_le_bytes_vec()
         }
+    }
+
+    pub fn leading_ones(&self) -> u32 {
+        let mut result = 0;
+
+        let mut it = self.value.iter();
+        while it.next().unwrap_or(&0).leading_ones() == 8 {
+            result += 8;
+        }
+
+        result += if let Some(v) = it.next() {
+            v.leading_ones()
+        } else {
+            0
+        };
+
+        result
+    }
+
+    pub fn trailing_ones(&self) -> u32 {
+        let mut result = 0;
+
+        let mut it = self.value.iter();
+        while it.next_back().unwrap_or(&0).trailing_ones() == 8 {
+            result += 8;
+        }
+
+        result += if let Some(v) = it.next() {
+            v.trailing_ones()
+        } else {
+            0
+        };
+
+        result
+    }
+
+    pub fn trailing_zeros(&self) -> u32 {
+        if self.is_zero() {
+            panic!("trailing zero is infinity");
+        }
+
+        let mut result = 0;
+
+        let mut it = self.value.iter();
+        while it.next_back().unwrap_or(&0).trailing_zeros() == 8 {
+            result += 8;
+        }
+
+        result += if let Some(v) = it.next() {
+            v.trailing_zeros()
+        } else {
+            0
+        };
+
+        result
     }
 }
 
