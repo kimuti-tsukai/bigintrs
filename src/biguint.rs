@@ -92,15 +92,9 @@ impl BigUint {
     }
 
     pub fn valid_bits(&self) -> usize {
-        let mut first_bits = 7;
-
         let first = self.value.first().unwrap();
 
-        while first_bits != 0 && first >> first_bits & 1 == 0 {
-            first_bits -= 1;
-        }
-
-        self.bits() + first_bits - 7
+        self.bits() - first.leading_ones() as usize
     }
 
     pub fn count_ones(&self) -> usize {
