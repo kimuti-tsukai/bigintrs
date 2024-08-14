@@ -127,7 +127,7 @@ impl BigUint {
         result
     }
 
-    pub fn karatsuba_mul(self, rhs: BigUint) -> Self {
+    pub fn karatsuba_mul(self, rhs: Self) -> Self {
         self._karatsuba_mul(&rhs)
     }
 
@@ -158,6 +158,28 @@ impl BigUint {
             value: self.value[mid..].to_vec(),
         };
         (low_part, high_part)
+    }
+
+    pub fn pow(self, rhs: u32) -> Self {
+        if rhs == 0 {
+            BigUint::one()
+        } else if rhs % 2 == 1 {
+            &self * self.clone().pow(rhs - 1)
+        } else {
+            let a = self.pow(rhs / 2);
+            &a * &a
+        }
+    }
+
+    pub fn pow_big(self, rhs: Self) -> Self {
+        if rhs.is_zero() {
+            BigUint::one()
+        } else if (&rhs % BigUint::from(2u8)).is_one() {
+            &self * self.clone().pow_big(rhs - BigUint::one())
+        } else {
+            let a = self.pow_big(rhs / BigUint::from(2u8));
+            &a * &a
+        }
     }
 
     const fn none() -> Self {
@@ -207,12 +229,20 @@ impl BigUint {
         Ok(result)
     }
 
-    pub fn div_ceil(self, rhs: BigUint) -> Self {
+    pub fn div_ceil(self, rhs: Self) -> Self {
         if (&self % &rhs).is_zero() {
             self / rhs
         } else {
             self / rhs + BigUint::one()
         }
+    }
+
+    pub fn div_euclid(self, rhs: Self) -> Self {
+        self / rhs
+    }
+
+    pub fn rem_euclid(self, rhs: Self) -> Self {
+        self % rhs
     }
 
     pub fn increment(&mut self) {
@@ -229,6 +259,62 @@ impl BigUint {
         } else {
             rhs - self
         }
+    }
+
+    pub fn checked_add(self, rhs: Self) -> Option<Self> {
+        Some(self + rhs)
+    }
+
+    pub fn checked_sub(self, rhs: Self) -> Option<Self> {
+        if rhs > self {
+            None
+        } else {
+            Some(self - rhs)
+        }
+    }
+
+    pub fn checked_mul(self, rhs: Self) -> Option<Self> {
+        Some(self * rhs)
+    }
+
+    pub fn checked_div(self, rhs: Self) -> Option<Self> {
+        Some(self / rhs)
+    }
+
+    pub fn checked_neg(self) -> Option<Self> {
+        if self.is_zero() {
+            Some(self)
+        } else {
+            None
+        }
+    }
+
+    pub fn checked_pow(self, rhs: u32) -> Option<Self> {
+        Some(self.pow(rhs))
+    }
+
+    pub fn checked_pow_big(self, rhs: Self) -> Option<Self> {
+        Some(self.pow_big(rhs))
+    }
+
+    pub fn checked_rem(self, rhs: Self) -> Option<Self> {
+        Some(self % rhs)
+    }
+
+    pub fn checked_div_euclid(self, rhs: Self) -> Option<Self> {
+        Some(self.div_euclid(rhs))
+    }
+
+    pub fn checked_rem_euclid(self, rhs: Self) -> Option<Self> {
+        Some(self.rem_euclid(rhs))
+    }
+
+    pub fn checked_shr(self, rhs: u32) -> Option<Self> {
+        Some(self >> rhs)
+    }
+
+    pub fn checked_shl(self, rhs: u32) -> Option<Self> {
+        Some(self << rhs)
     }
 }
 
@@ -866,6 +952,10 @@ impl Div for BigUint {
     type Output = Self;
 
     fn div(mut self, rhs: Self) -> Self::Output {
+        if rhs.is_zero() {
+            panic!("attempt to divide by zero");
+        }
+
         let mut result = BigUint::zero();
 
         while self >= rhs {
