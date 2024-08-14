@@ -316,6 +316,94 @@ impl BigUint {
     pub fn checked_shl(self, rhs: u32) -> Option<Self> {
         Some(self << rhs)
     }
+
+    pub fn swap_bytes(self) -> Self {
+        BigUint {
+            value: self.value.into_iter().rev().skip_while(|v| *v == 0).collect()
+        }
+    }
+
+    pub fn from_be(self) -> Self {
+        self
+    }
+
+    pub fn from_be_bytes(bytes: &[u8]) -> Self {
+        let mut result = BigUint::none();
+
+        for i in bytes.iter().skip_while(|&v| *v == 0) {
+            result.push(*i)
+        }
+
+        result
+    }
+
+    pub fn from_le(self) -> Self {
+        self.swap_bytes()
+    }
+
+    pub fn from_le_bytes(bytes: &[u8]) -> Self {
+        let mut result = BigUint::none();
+
+        for i in bytes.iter().rev().skip_while(|&v| *v == 0) {
+            result.push(*i)
+        }
+
+        result
+    }
+
+    pub fn from_ne_bytes(bytes: &[u8]) -> Self {
+        if cfg!(target_endian = "big") {
+            BigUint::from_be_bytes(bytes)
+        } else {
+            BigUint::from_le_bytes(bytes)
+        }
+    }
+
+    pub fn to_be(self) -> Self {
+        self
+    }
+
+    pub fn to_be_bytes(self) -> Box<[u8]> {
+        self.value.as_slice().into()
+    }
+
+    pub fn to_be_bytes_vec(self) -> Vec<u8> {
+        self.value
+    }
+
+    pub fn to_le(self) -> Self {
+        self.swap_bytes()
+    }
+
+    pub fn to_le_bytes(self) -> Box<[u8]> {
+        let mut vec = self.value;
+        vec.reverse();
+
+        vec.as_slice().into()
+    }
+
+    pub fn to_le_bytes_vec(self) -> Vec<u8> {
+        let mut vec = self.value;
+        vec.reverse();
+
+        vec
+    }
+
+    pub fn to_ne_bytes(self) -> Box<[u8]> {
+        if cfg!(target_endian = "big") {
+            self.to_be_bytes()
+        } else {
+            self.to_le_bytes()
+        }
+    }
+
+    pub fn to_ne_bytes_vec(self) -> Vec<u8> {
+        if cfg!(target_endian = "big") {
+            self.to_be_bytes_vec()
+        } else {
+            self.to_le_bytes_vec()
+        }
+    }
 }
 
 impl From<u8> for BigUint {
