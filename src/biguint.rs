@@ -94,7 +94,7 @@ impl BigUint {
     pub fn valid_bits(&self) -> usize {
         let first = self.value.first().unwrap();
 
-        self.bits() - first.leading_ones() as usize
+        self.bits() - first.leading_zeros() as usize
     }
 
     pub fn count_ones(&self) -> usize {
