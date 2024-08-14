@@ -222,6 +222,14 @@ impl BigUint {
     pub fn decrement(&mut self) {
         *self -= BigUint::one();
     }
+
+    pub fn abs_diff(self, rhs: Self) -> Self {
+        if self > rhs {
+            self - rhs
+        } else {
+            rhs - self
+        }
+    }
 }
 
 impl From<u8> for BigUint {
