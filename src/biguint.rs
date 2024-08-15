@@ -91,11 +91,11 @@ impl BigUint {
         *self = BigUint::one()
     }
 
-    pub fn bytes(&self) -> u32 {
+    fn bytes(&self) -> u32 {
         self.value.len() as u32
     }
 
-    pub fn bits(&self) -> u32 {
+    fn bits(&self) -> u32 {
         self.bytes() * 8
     }
 
@@ -497,6 +497,54 @@ impl BigUint {
         };
 
         result
+    }
+
+    pub fn checked_ilog2(self) -> Option<u32> {
+        if self.is_zero() {
+            None
+        } else {
+            Some(self.valid_bits())
+        }
+    }
+
+    pub fn checked_ilog(self, base: Self) -> Option<u32> {
+        if self.is_zero() || base < Self::one() {
+            None
+        } else if self < base {
+            Some(0)
+        } else {
+            let mut pow = Self::one();
+
+            let mut counter = 0;
+
+            if self.bytes() >= 16 {
+                counter = self.clone().ilog2() / (base.clone().ilog2() + 1)
+            }
+
+            while pow <= &self / &base {
+                pow *= &base;
+                counter += 1;
+            }
+
+            Some(counter)
+        }
+    }
+
+    pub fn checked_ilog10(self) -> Option<u32> {
+        self.checked_ilog(Self::from(10u8))
+    }
+
+    pub fn ilog2(self) -> u32 {
+        self.checked_ilog2().unwrap_or_else(|| panic!("argument of integer logarithm must be positive"))
+    }
+
+    pub fn ilog(self, base: Self) -> u32 {
+        assert!(base >= Self::from(2u8), "base of integer logarithm must be at least 2");
+        self.checked_ilog(base).unwrap_or_else(|| panic!("argument of integer logarithm must be positive"))
+    }
+
+    pub fn ilog10(self) -> u32 {
+        self.checked_ilog10().unwrap_or_else(|| panic!("argument of integer logarithm must be positive"))
     }
 }
 
