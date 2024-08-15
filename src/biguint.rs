@@ -1405,7 +1405,7 @@ mod tests {
 
         assert_eq!(BigUint::zero() * BigUint::from(123456u32), BigUint::zero());
 
-        assert_eq!(BigUint::from(1u8) * BigUint::from(1u8), BigUint::from(1u8));
+        assert_eq!(BigUint::one() * BigUint::one(), BigUint::one());
 
         assert_eq!(
             BigUint::from_str_radix("1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", 2).unwrap() * BigUint::from(0b11u8),
@@ -1432,7 +1432,7 @@ mod tests {
 
         assert_eq!(BigUint::zero() / BigUint::from(123456u32), BigUint::zero());
 
-        assert_eq!(BigUint::from(1u8) / BigUint::from(1u8), BigUint::from(1u8));
+        assert_eq!(BigUint::one() / BigUint::one(), BigUint::one());
 
         assert_eq!(
             BigUint::from(123456789012345678900u128) / BigUint::from(10u8),
@@ -1466,7 +1466,7 @@ mod tests {
 
         assert_eq!(
             BigUint::from(100u8) % BigUint::from(3u8),
-            BigUint::from(1u8)
+            BigUint::one()
         );
 
         assert_eq!(BigUint::zero() % BigUint::from(123456u32), BigUint::zero());
@@ -1478,7 +1478,7 @@ mod tests {
 
         assert_eq!(
             BigUint::from_str_radix("1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001", 2).unwrap() % BigUint::from(0b10u8),
-            BigUint::from(1u8)
+            BigUint::one()
         );
     }
 
@@ -1491,7 +1491,7 @@ mod tests {
 
         assert_eq!(
             BigUint::from_str_radix("1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", 2).unwrap(),
-            BigUint::from(1u8) << (64 * 3)
+            BigUint::one() << (64 * 3)
         );
     }
 
@@ -1513,7 +1513,7 @@ mod tests {
 
         assert_eq!(BigUint::zero().to_string(), String::from("0"));
 
-        assert_eq!(BigUint::from(1u8).to_string(), String::from("1"));
+        assert_eq!(BigUint::one().to_string(), String::from("1"));
 
         assert_eq!(
             BigUint::from(12345678901234567890u64).to_string(),
