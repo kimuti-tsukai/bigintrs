@@ -91,18 +91,18 @@ impl BigUint {
         *self = BigUint::one()
     }
 
-    pub fn bytes(&self) -> usize {
-        self.value.len()
+    pub fn bytes(&self) -> u32 {
+        self.value.len() as u32
     }
 
-    pub fn bits(&self) -> usize {
+    pub fn bits(&self) -> u32 {
         self.bytes() * 8
     }
 
-    pub fn valid_bits(&self) -> usize {
+    pub fn valid_bits(&self) -> u32 {
         let first = self.value.first().unwrap();
 
-        self.bits() - first.leading_zeros() as usize
+        self.bits() - first.leading_zeros()
     }
 
     pub fn count_ones(&self) -> usize {
@@ -231,6 +231,34 @@ impl BigUint {
         Ok(result)
     }
 
+    pub fn to_str_radix(self, radix: u32) -> String {
+        if !(2..=36).contains(&radix) {
+            panic!(
+                "from_str_radix_int: must lie in the range `[2, 36]` - found {}",
+                radix
+            );
+        }
+
+        let mut chars = Vec::new();
+
+        let mut src = self;
+
+        while !src.is_zero() {
+            let push =
+                char::from_digit((&src % BigUint::from(radix)).try_into().unwrap(), radix).unwrap();
+
+            chars.push(push);
+
+            src /= BigUint::from(radix);
+        }
+
+        if chars.is_empty() {
+            String::from("0")
+        } else {
+            chars.into_iter().rev().collect()
+        }
+    }
+
     pub fn div_ceil(self, rhs: Self) -> Self {
         if (&self % &rhs).is_zero() {
             self / rhs
@@ -321,7 +349,12 @@ impl BigUint {
 
     fn swap_bytes(self) -> Self {
         BigUint {
-            value: self.value.into_iter().rev().skip_while(|v| *v == 0).collect()
+            value: self
+                .value
+                .into_iter()
+                .rev()
+                .skip_while(|v| *v == 0)
+                .collect(),
         }
     }
 
@@ -515,17 +548,34 @@ macro_rules! impl_try_from_signed_int {
 
 impl_try_from_signed_int!(i8, i16, i32, i64, i128, isize);
 
-impl TryFrom<BigUint> for u8 {
-    type Error = IntErrorKind;
+macro_rules! impl_try_from_BigUint_for_unsigned {
+    ($type: ty) => {
+        impl TryFrom<BigUint> for $type {
+            type Error = IntErrorKind;
 
-    fn try_from(value: BigUint) -> Result<Self, Self::Error> {
-        if value.value.len() > 1 {
-            Err(IntErrorKind::PosOverflow)
-        } else {
-            Ok(*value.value.first().unwrap())
+            fn try_from(value: BigUint) -> Result<Self, Self::Error> {
+                if value.bytes() > <$type>::BITS / 8 {
+                    Err(IntErrorKind::PosOverflow)
+                } else {
+                    let mut array = [0; (<$type>::BITS / 8) as usize];
+
+                    for (index,i) in value.value.into_iter().rev().enumerate() {
+                        array[index] = i;
+                    }
+
+                    Ok(<$type>::from_le_bytes(array))
+                }
+            }
         }
-    }
+    };
+    ($($type: ty),+) => {
+        $(
+            impl_try_from_BigUint_for_unsigned!($type);
+        )+
+    };
 }
+
+impl_try_from_BigUint_for_unsigned!(u8, u16, u32, u64, u128, usize);
 
 impl AsRef<Self> for BigUint {
     fn as_ref(&self) -> &Self {
@@ -1159,39 +1209,9 @@ impl FromStr for BigUint {
 
 impl Display for BigUint {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut chars = Vec::new();
+        let write = self.clone().to_str_radix(10);
 
-        let mut src = self.clone();
-
-        while src != BigUint::zero() {
-            chars.push(match &src % BigUint::from(10u8) {
-                c if c.is_zero() => '0',
-                c if c == BigUint::from(1u8) => '1',
-                c if c == BigUint::from(2u8) => '2',
-                c if c == BigUint::from(3u8) => '3',
-                c if c == BigUint::from(4u8) => '4',
-                c if c == BigUint::from(5u8) => '5',
-                c if c == BigUint::from(6u8) => '6',
-                c if c == BigUint::from(7u8) => '7',
-                c if c == BigUint::from(8u8) => '8',
-                c if c == BigUint::from(9u8) => '9',
-                _ => unreachable!(),
-            });
-
-            src /= BigUint::from(10u8);
-        }
-
-        let write = chars.into_iter().rev().collect::<String>();
-
-        write!(
-            f,
-            "{}",
-            if write.is_empty() {
-                String::from("0")
-            } else {
-                write
-            }
-        )
+        write!(f, "{}", write)
     }
 }
 
@@ -1464,10 +1484,7 @@ mod tests {
             BigUint::zero()
         );
 
-        assert_eq!(
-            BigUint::from(100u8) % BigUint::from(3u8),
-            BigUint::one()
-        );
+        assert_eq!(BigUint::from(100u8) % BigUint::from(3u8), BigUint::one());
 
         assert_eq!(BigUint::zero() % BigUint::from(123456u32), BigUint::zero());
 
