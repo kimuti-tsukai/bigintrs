@@ -1,7 +1,7 @@
 use std::{
     borrow::{Borrow, BorrowMut},
     cmp::{self, Ordering},
-    fmt::Display,
+    fmt::{Binary, Display},
     num::IntErrorKind,
     ops::{
         Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Div,
@@ -231,7 +231,7 @@ impl BigUint {
         Ok(result)
     }
 
-    pub fn to_str_radix(self, radix: u32) -> String {
+    pub fn to_str_radix_lower(self, radix: u32) -> String {
         if !(2..=36).contains(&radix) {
             panic!(
                 "from_str_radix_int: must lie in the range `[2, 36]` - found {}",
@@ -257,6 +257,10 @@ impl BigUint {
         } else {
             chars.into_iter().rev().collect()
         }
+    }
+
+    pub fn to_str_radix_upper(self, radix: u32) -> String {
+        self.to_str_radix_lower(radix).to_ascii_uppercase()
     }
 
     pub fn div_ceil(self, rhs: Self) -> Self {
@@ -1209,7 +1213,15 @@ impl FromStr for BigUint {
 
 impl Display for BigUint {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let write = self.clone().to_str_radix(10);
+        let write = self.clone().to_str_radix_lower(10);
+
+        write!(f, "{}", write)
+    }
+}
+
+impl Binary for BigUint {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let write = self.clone().to_str_radix_lower(2);
 
         write!(f, "{}", write)
     }
@@ -1536,5 +1548,10 @@ mod tests {
             BigUint::from(12345678901234567890u64).to_string(),
             String::from("12345678901234567890")
         );
+    }
+
+    #[test]
+    fn to_str_radix() {
+        dbg!(BigUint::from(0x_1a_u16).to_str_radix_lower(16));
     }
 }
