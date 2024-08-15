@@ -1,7 +1,7 @@
 use std::{
     borrow::{Borrow, BorrowMut},
     cmp::{self, Ordering},
-    fmt::{Binary, Display},
+    fmt::{Binary, Display, LowerHex, Octal, UpperHex},
     num::IntErrorKind,
     ops::{
         Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Div,
@@ -1211,17 +1211,33 @@ impl FromStr for BigUint {
     }
 }
 
-impl Display for BigUint {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let write = self.clone().to_str_radix_lower(10);
+macro_rules! impl_fmt_radix_lower {
+    ($trait: ty, $radix: expr) => {
+        impl $trait for BigUint {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                let write = self.clone().to_str_radix_lower($radix);
 
-        write!(f, "{}", write)
+                write!(f, "{}", write)
+            }
+        }
+    };
+    ($($trait: ty, $radix: expr);+) => {
+        $(
+            impl_fmt_radix_lower!($trait, $radix);
+        )+
     }
 }
 
-impl Binary for BigUint {
+impl_fmt_radix_lower!(
+    Display, 10;
+    Binary, 2;
+    Octal, 8;
+    LowerHex, 16
+);
+
+impl UpperHex for BigUint {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let write = self.clone().to_str_radix_lower(2);
+        let write = self.clone().to_str_radix_upper(16);
 
         write!(f, "{}", write)
     }
