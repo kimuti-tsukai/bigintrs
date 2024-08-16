@@ -279,12 +279,16 @@ impl BigUint {
         self % rhs
     }
 
-    pub fn increment(&mut self) {
+    pub fn increment(&mut self) -> &Self {
         *self += BigUint::one();
+
+        &*self
     }
 
-    pub fn decrement(&mut self) {
+    pub fn decrement(&mut self) -> &Self {
         *self -= BigUint::one();
+
+        &*self
     }
 
     pub fn abs_diff(self, rhs: Self) -> Self {
@@ -535,16 +539,38 @@ impl BigUint {
     }
 
     pub fn ilog2(self) -> u32 {
-        self.checked_ilog2().unwrap_or_else(|| panic!("argument of integer logarithm must be positive"))
+        self.checked_ilog2()
+            .unwrap_or_else(|| panic!("argument of integer logarithm must be positive"))
     }
 
     pub fn ilog(self, base: Self) -> u32 {
-        assert!(base >= Self::from(2u8), "base of integer logarithm must be at least 2");
-        self.checked_ilog(base).unwrap_or_else(|| panic!("argument of integer logarithm must be positive"))
+        assert!(
+            base >= Self::from(2u8),
+            "base of integer logarithm must be at least 2"
+        );
+        self.checked_ilog(base)
+            .unwrap_or_else(|| panic!("argument of integer logarithm must be positive"))
     }
 
     pub fn ilog10(self) -> u32 {
-        self.checked_ilog10().unwrap_or_else(|| panic!("argument of integer logarithm must be positive"))
+        self.checked_ilog10()
+            .unwrap_or_else(|| panic!("argument of integer logarithm must be positive"))
+    }
+
+    pub fn is_power_of_two(&self) -> bool {
+        self.count_ones() == 1
+    }
+
+    pub fn next_power_of_two(self) -> Self {
+        if self.is_power_of_two() {
+            self
+        } else {
+            Self::one() << (self.valid_bits() + 1)
+        }
+    }
+
+    pub fn checked_next_power_of_two(self) -> Option<Self> {
+        Some(self.next_power_of_two())
     }
 }
 
