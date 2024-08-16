@@ -882,45 +882,39 @@ macro_rules! impl_shr_and_shl_unsigned {
         impl Shr<$type> for BigUint {
             type Output = Self;
 
-            fn shr(self, rhs: $type) -> Self::Output {
+            fn shr(mut self, mut rhs: $type) -> Self::Output {
                 if self.valid_bits() as $type <= rhs {
                     return BigUint::new();
                 }
 
-                match rhs.cmp(&8) {
-                    Ordering::Equal => {
-                        let mut result = BigUint::none();
+                for _ in 0..rhs/8 {
+                    self.value.pop();
+                }
 
-                        let mut it = self.value.into_iter();
-                        it.next_back();
-                        for i in it {
-                            result.push(i);
-                        }
+                rhs %= 8;
 
-                        result
-                    }
-                    Ordering::Less => {
-                        let mut result = BigUint::none();
+                if rhs == 0 {
+                    self
+                } else {
+                    let mut result = BigUint::none();
 
-                        let mut is_firstloop = true;
-                        let mut next = 0;
-                        for i in self.value {
-                            if is_firstloop {
-                                if i >> rhs != 0 {
-                                    result.push(i >> rhs);
-                                }
-
-                                is_firstloop = false;
-                            } else {
-                                result.push((i >> rhs) + next);
+                    let mut is_firstloop = true;
+                    let mut next = 0;
+                    for i in self.value {
+                        if is_firstloop {
+                            if i >> rhs != 0 {
+                                result.push(i >> rhs);
                             }
 
-                            next = (i - ((i >> rhs) << rhs)) << (8 - rhs);
+                            is_firstloop = false;
+                        } else {
+                            result.push((i >> rhs) + next);
                         }
 
-                        result
+                        next = (i - ((i >> rhs) << rhs)) << (8 - rhs);
                     }
-                    _ => self >> 8 as $type >> (rhs - 8),
+
+                    result
                 }
             }
         }
