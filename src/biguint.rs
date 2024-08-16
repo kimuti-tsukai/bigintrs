@@ -977,47 +977,41 @@ impl_shr_and_shl_unsigned!(usize, u8, u16, u32, u64, u128);
 impl Shr for BigUint {
     type Output = Self;
 
-    fn shr(self, rhs: Self) -> Self::Output {
+    fn shr(mut self, rhs: Self) -> Self::Output {
         if BigUint::from(self.valid_bits()) <= rhs {
             return BigUint::new();
         }
 
-        match rhs.cmp(&BigUint::from(8u8)) {
-            Ordering::Equal => {
-                let mut result = BigUint::none();
+        let mut cnt = &rhs / BigUint::from(8u8);
+        while cnt > BigUint::zero() {
+            self.value.pop();
+            cnt.decrement();
+        }
 
-                let mut it = self.value.into_iter();
-                it.next_back();
-                for i in it {
-                    result.push(i);
-                }
+        let rhs = u8::try_from(rhs % BigUint::from(8u8)).unwrap();
 
-                result
-            }
-            Ordering::Less => {
-                let mut result = BigUint::none();
+        if rhs == 0 {
+            self
+        } else {
+            let mut result = BigUint::none();
 
-                let rhs: u8 = rhs.try_into().unwrap();
-
-                let mut is_firstloop = true;
-                let mut next = 0;
-                for i in self.value {
-                    if is_firstloop {
-                        if i >> rhs != 0 {
-                            result.push(i >> rhs);
-                        }
-
-                        is_firstloop = false;
-                    } else {
-                        result.push((i >> rhs) + next);
+            let mut is_firstloop = true;
+            let mut next = 0;
+            for i in self.value {
+                if is_firstloop {
+                    if i >> rhs != 0 {
+                        result.push(i >> rhs);
                     }
 
-                    next = (i - ((i >> rhs) << rhs)) << (8 - rhs);
+                    is_firstloop = false;
+                } else {
+                    result.push((i >> rhs) + next);
                 }
 
-                result
+                next = (i - ((i >> rhs) << rhs)) << (8 - rhs);
             }
-            _ => self >> 8u8 >> (rhs - BigUint::from(8u8)),
+
+            result
         }
     }
 }
