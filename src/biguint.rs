@@ -1658,7 +1658,7 @@ mod tests {
     }
 
     #[test]
-    fn to_str_radix_lower_test() {
+    fn to_str_radix_lower() {
         // 10進数
         assert_eq!(
             BigUint::from(255u32).to_str_radix_lower(10),
@@ -1697,7 +1697,7 @@ mod tests {
     }
 
     #[test]
-    fn to_str_radix_upper_test() {
+    fn to_str_radix_upper() {
         // 10進数
         assert_eq!(
             BigUint::from(255u32).to_str_radix_upper(10),
@@ -1736,7 +1736,7 @@ mod tests {
     }
 
     #[test]
-    fn pow_test() {
+    fn power() {
         // 2^3 = 8
         assert_eq!(BigUint::from(2u32).pow(3), BigUint::from(8u32));
 
