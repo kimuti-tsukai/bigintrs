@@ -1649,7 +1649,84 @@ mod tests {
     }
 
     #[test]
-    fn to_str_radix() {
-        dbg!(BigUint::from(0x_1a_u16).to_str_radix_lower(16));
+    fn to_str_radix_lower_test() {
+        use crate::BigUint;
+
+        // 10進数
+        assert_eq!(
+            BigUint::from(255u32).to_str_radix_lower(10),
+            String::from("255")
+        );
+
+        // 16進数 (小文字)
+        assert_eq!(
+            BigUint::from(255u32).to_str_radix_lower(16),
+            String::from("ff")
+        );
+
+        // 2進数
+        assert_eq!(
+            BigUint::from(255u32).to_str_radix_lower(2),
+            String::from("11111111")
+        );
+
+        // 8進数
+        assert_eq!(
+            BigUint::from(255u32).to_str_radix_lower(8),
+            String::from("377")
+        );
+
+        // 大きな数の16進数 (小文字)
+        assert_eq!(
+            BigUint::from(12345678901234567890u64).to_str_radix_lower(16),
+            String::from("ab54a98ceb1f0ad2")
+        );
+
+        // 2進数 (小さな数)
+        assert_eq!(BigUint::from(1u8).to_str_radix_lower(2), String::from("1"));
+
+        // 10進数 (ゼロ)
+        assert_eq!(BigUint::from(0u8).to_str_radix_lower(10), String::from("0"));
+    }
+
+    #[test]
+    fn to_str_radix_upper_test() {
+        use crate::BigUint;
+
+        // 10進数
+        assert_eq!(
+            BigUint::from(255u32).to_str_radix_upper(10),
+            String::from("255")
+        );
+
+        // 16進数 (大文字)
+        assert_eq!(
+            BigUint::from(255u32).to_str_radix_upper(16),
+            String::from("FF")
+        );
+
+        // 2進数
+        assert_eq!(
+            BigUint::from(255u32).to_str_radix_upper(2),
+            String::from("11111111")
+        );
+
+        // 8進数
+        assert_eq!(
+            BigUint::from(255u32).to_str_radix_upper(8),
+            String::from("377")
+        );
+
+        // 大きな数の16進数 (大文字)
+        assert_eq!(
+            BigUint::from(12345678901234567890u64).to_str_radix_upper(16),
+            String::from("AB54A98CEB1F0AD2")
+        );
+
+        // 2進数 (小さな数)
+        assert_eq!(BigUint::from(1u8).to_str_radix_upper(2), String::from("1"));
+
+        // 10進数 (ゼロ)
+        assert_eq!(BigUint::from(0u8).to_str_radix_upper(10), String::from("0"));
     }
 }
