@@ -1683,10 +1683,10 @@ mod tests {
         );
 
         // 2進数 (小さな数)
-        assert_eq!(BigUint::from(1u8).to_str_radix_lower(2), String::from("1"));
+        assert_eq!(BigUint::one().to_str_radix_lower(2), String::from("1"));
 
         // 10進数 (ゼロ)
-        assert_eq!(BigUint::from(0u8).to_str_radix_lower(10), String::from("0"));
+        assert_eq!(BigUint::zero().to_str_radix_lower(10), String::from("0"));
     }
 
     #[test]
@@ -1724,9 +1724,9 @@ mod tests {
         );
 
         // 2進数 (小さな数)
-        assert_eq!(BigUint::from(1u8).to_str_radix_upper(2), String::from("1"));
+        assert_eq!(BigUint::one().to_str_radix_upper(2), String::from("1"));
 
         // 10進数 (ゼロ)
-        assert_eq!(BigUint::from(0u8).to_str_radix_upper(10), String::from("0"));
+        assert_eq!(BigUint::zero().to_str_radix_upper(10), String::from("0"));
     }
 }
