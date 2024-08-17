@@ -610,7 +610,11 @@ macro_rules! impl_from_unsigned_int {
                     result.push(i);
                 }
 
-                result
+                if result.value.is_empty() {
+                    BigUint::zero()
+                } else {
+                    result
+                }
             }
         }
     };
@@ -1337,6 +1341,11 @@ mod tests {
     use super::*;
 
     #[test]
+    fn run() {
+        dbg_biguint!(BigUint::from(0u32));
+    }
+
+    #[test]
     fn valid_bits() {
         assert_eq!(
             BigUint::from(0b_00000000_00000011_11111100_00000000_u32).valid_bits(),
@@ -1650,8 +1659,6 @@ mod tests {
 
     #[test]
     fn to_str_radix_lower_test() {
-        use crate::BigUint;
-
         // 10進数
         assert_eq!(
             BigUint::from(255u32).to_str_radix_lower(10),
@@ -1691,8 +1698,6 @@ mod tests {
 
     #[test]
     fn to_str_radix_upper_test() {
-        use crate::BigUint;
-
         // 10進数
         assert_eq!(
             BigUint::from(255u32).to_str_radix_upper(10),
@@ -1728,5 +1733,29 @@ mod tests {
 
         // 10進数 (ゼロ)
         assert_eq!(BigUint::zero().to_str_radix_upper(10), String::from("0"));
+    }
+
+    #[test]
+    fn pow_test() {
+        // 2^3 = 8
+        assert_eq!(BigUint::from(2u32).pow(3), BigUint::from(8u32));
+
+        // 5^0 = 1 (ゼロ乗)
+        assert_eq!(BigUint::from(5u32).pow(0), BigUint::one());
+
+        // 7^1 = 7 (1乗)
+        assert_eq!(BigUint::from(7u32).pow(1), BigUint::from(7u32));
+
+        // 10^5 = 100000
+        assert_eq!(BigUint::from(10u32).pow(5), BigUint::from(100000u32));
+
+        // 0^10 = 0 (0のべき乗)
+        assert_eq!(BigUint::zero().pow(10), BigUint::zero());
+
+        // 大きな数のべき乗: 2^64
+        assert_eq!(
+            BigUint::from(2u32).pow(64),
+            BigUint::from(18446744073709551616u128)
+        );
     }
 }
