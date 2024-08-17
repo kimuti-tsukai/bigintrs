@@ -572,6 +572,26 @@ impl BigUint {
     pub fn checked_next_power_of_two(self) -> Option<Self> {
         Some(self.next_power_of_two())
     }
+
+    pub fn saturating_add(self, rhs: Self) -> Self {
+        self + rhs
+    }
+
+    pub fn saturating_sub(self, rhs: Self) -> Self {
+        self.checked_sub(rhs).unwrap_or_default()
+    }
+
+    pub fn saturating_mul(self, rhs: Self) -> Self {
+        self * rhs
+    }
+
+    pub fn saturating_div(self, rhs: Self) -> Self {
+        self / rhs
+    }
+
+    pub fn saturating_pow(self, exp: u32) -> Self {
+        self.pow(exp)
+    }
 }
 
 impl From<u8> for BigUint {
