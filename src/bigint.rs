@@ -27,7 +27,7 @@ impl BigInt {
         }
     }
 
-    fn is_zero_and_sign(mut self) -> Self {
+    fn unwrap_zero_and_sign(mut self) -> Self {
         if self.is_zero() {
             self.is_zero_and_set_sign();
         }
@@ -80,3 +80,24 @@ impl BigInt {
         self.sign == Sign::Negative
     }
 }
+
+impl From<BigUint> for BigInt {
+    fn from(value: BigUint) -> Self {
+        BigInt {
+            sign: if value.is_zero() { Sign::Zero } else { Sign::Positive },
+            value
+        }
+    }
+}
+
+macro_rules! impl_from_unsigned_int {
+    ($($type: ty),+) => {$(
+        impl From<$type> for BigInt {
+            fn from(value: $type) -> Self {
+                Self::from(BigUint::from(value))
+            }
+        }
+    )+};
+}
+
+impl_from_unsigned_int!(u8, u16, u32, u64, u128, usize);
