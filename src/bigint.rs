@@ -101,3 +101,23 @@ macro_rules! impl_from_unsigned_int {
 }
 
 impl_from_unsigned_int!(u8, u16, u32, u64, u128, usize);
+
+macro_rules! impl_from_signed_int {
+    ($($type: ty),+) => {$(
+        impl From<$type> for BigInt {
+            fn from(value: $type) -> Self {
+                match value.signum() {
+                    0 => Self::zero(),
+                    1 => Self::from(BigUint::try_from(value).unwrap()),
+                    -1 => Self {
+                        sign: Sign::Negative,
+                        value: BigUint::try_from(-value).unwrap()
+                    },
+                    _ => unreachable!()
+                }
+            }
+        }
+    )+};
+}
+
+impl_from_signed_int!(i8, i16, i32, i64, i128, isize);
