@@ -1,3 +1,5 @@
+use std::ops::Neg;
+
 use crate::BigUint;
 
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
@@ -121,3 +123,15 @@ macro_rules! impl_from_signed_int {
 }
 
 impl_from_signed_int!(i8, i16, i32, i64, i128, isize);
+
+impl Neg for BigInt {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        match self.sign {
+            Sign::Positive => Self { sign: Sign::Negative, ..self },
+            Sign::Negative => Self { sign: Sign::Positive, ..self },
+            Sign::Zero => self
+        }
+    }
+}
