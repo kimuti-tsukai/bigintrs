@@ -142,6 +142,8 @@ impl Add for BigInt {
                 sign: self.sign,
                 value: &self.value + &rhs.value,
             }
+        } else if self.value == rhs.value {
+            Self::zero()
         } else {
             let value = self.value.clone().abs_diff(rhs.value.clone());
             Self {
