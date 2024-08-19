@@ -1,4 +1,4 @@
-use std::ops::Neg;
+use std::ops::{Add, Neg};
 
 use crate::BigUint;
 
@@ -6,7 +6,7 @@ use crate::BigUint;
 enum Sign {
     Positive = 1,
     Zero = 0,
-    Negative = -1
+    Negative = -1,
 }
 
 impl Default for Sign {
@@ -18,24 +18,7 @@ impl Default for Sign {
 #[derive(Clone, Debug, Hash, Default, PartialEq, Eq)]
 pub struct BigInt {
     sign: Sign,
-    value: BigUint
-}
-
-// Private methods
-impl BigInt {
-    fn is_zero_and_set_sign(&mut self) {
-        if self.is_zero() {
-            self.sign = Sign::Zero
-        }
-    }
-
-    fn unwrap_zero_and_sign(mut self) -> Self {
-        if self.is_zero() {
-            self.is_zero_and_set_sign();
-        }
-
-        self
-    }
+    value: BigUint,
 }
 
 // Public methods
@@ -43,7 +26,7 @@ impl BigInt {
     pub fn new() -> Self {
         BigInt {
             sign: Sign::Zero,
-            value: BigUint::new()
+            value: BigUint::new(),
         }
     }
 
@@ -52,7 +35,7 @@ impl BigInt {
     }
 
     pub fn is_zero(&self) -> bool {
-        self.value.is_zero()
+        self.sign == Sign::Zero
     }
 
     pub fn set_zero(&mut self) {
@@ -62,7 +45,7 @@ impl BigInt {
     pub fn one() -> Self {
         BigInt {
             sign: Sign::Positive,
-            value: BigUint::one()
+            value: BigUint::one(),
         }
     }
 
@@ -86,8 +69,12 @@ impl BigInt {
 impl From<BigUint> for BigInt {
     fn from(value: BigUint) -> Self {
         BigInt {
-            sign: if value.is_zero() { Sign::Zero } else { Sign::Positive },
-            value
+            sign: if value.is_zero() {
+                Sign::Zero
+            } else {
+                Sign::Positive
+            },
+            value,
         }
     }
 }
@@ -129,9 +116,38 @@ impl Neg for BigInt {
 
     fn neg(self) -> Self::Output {
         match self.sign {
-            Sign::Positive => Self { sign: Sign::Negative, ..self },
-            Sign::Negative => Self { sign: Sign::Positive, ..self },
-            Sign::Zero => self
+            Sign::Positive => Self {
+                sign: Sign::Negative,
+                ..self
+            },
+            Sign::Negative => Self {
+                sign: Sign::Positive,
+                ..self
+            },
+            Sign::Zero => self,
+        }
+    }
+}
+
+impl Add for BigInt {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        if self.is_zero() {
+            rhs
+        } else if rhs.is_zero() {
+            self
+        } else if self.sign == rhs.sign {
+            Self {
+                sign: self.sign,
+                value: &self.value + &rhs.value,
+            }
+        } else {
+            let value = self.value.clone().abs_diff(rhs.value.clone());
+            Self {
+                sign: std::cmp::max_by(self, rhs, |a, b| a.value.cmp(&b.value)).sign,
+                value,
+            }
         }
     }
 }
