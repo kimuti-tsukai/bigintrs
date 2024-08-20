@@ -1,6 +1,6 @@
 use std::{
     num::IntErrorKind,
-    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign},
+    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign}, str::FromStr,
 };
 
 use crate::BigUint;
@@ -394,6 +394,14 @@ impl_assign_for_ref!(
     DivAssign, div_assign;
     RemAssign, rem_assign
 );
+
+impl FromStr for BigInt {
+    type Err = IntErrorKind;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        BigInt::from_str_radix(s, 10)
+    }
+}
 
 #[cfg(test)]
 mod test {
