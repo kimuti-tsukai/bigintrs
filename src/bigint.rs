@@ -1,6 +1,8 @@
 use std::{
+    fmt::{Binary, Display, LowerHex, Octal, UpperHex},
     num::IntErrorKind,
-    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign}, str::FromStr,
+    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign},
+    str::FromStr,
 };
 
 use crate::BigUint;
@@ -403,6 +405,38 @@ impl FromStr for BigInt {
     }
 }
 
+macro_rules! impl_fmt_radix_lower {
+    ($trait: ty, $radix: expr) => {
+        impl $trait for BigInt {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                let write = self.clone().to_str_radix_lower($radix);
+
+                write!(f, "{}", write)
+            }
+        }
+    };
+    ($($trait: ty, $radix: expr);+) => {
+        $(
+            impl_fmt_radix_lower!($trait, $radix);
+        )+
+    }
+}
+
+impl_fmt_radix_lower!(
+    Display, 10;
+    Binary, 2;
+    Octal, 8;
+    LowerHex, 16
+);
+
+impl UpperHex for BigInt {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let write = self.clone().to_str_radix_upper(16);
+
+        write!(f, "{}", write)
+    }
+}
+
 #[cfg(test)]
 mod test {
     #[allow(unused_imports)]
@@ -537,28 +571,16 @@ mod test {
         );
 
         // 16進数での出力 (小文字)
-        assert_eq!(
-            BigInt::from(0xabcdefu32).to_str_radix_lower(16),
-            "abcdef"
-        );
+        assert_eq!(BigInt::from(0xabcdefu32).to_str_radix_lower(16), "abcdef");
 
         // 2進数での出力
-        assert_eq!(
-            BigInt::from(42u32).to_str_radix_lower(2),
-            "101010"
-        );
+        assert_eq!(BigInt::from(42u32).to_str_radix_lower(2), "101010");
 
         // 8進数での出力
-        assert_eq!(
-            BigInt::from(342391u32).to_str_radix_lower(8),
-            "1234567"
-        );
+        assert_eq!(BigInt::from(342391u32).to_str_radix_lower(8), "1234567");
 
         // 負の数の16進数での出力 (小文字)
-        assert_eq!(
-            BigInt::from(-0xabcdefi32).to_str_radix_lower(16),
-            "-abcdef"
-        );
+        assert_eq!(BigInt::from(-0xabcdefi32).to_str_radix_lower(16), "-abcdef");
     }
 
     #[test]
@@ -570,27 +592,15 @@ mod test {
         );
 
         // 16進数での出力 (大文字)
-        assert_eq!(
-            BigInt::from(0xabcdefu32).to_str_radix_upper(16),
-            "ABCDEF"
-        );
+        assert_eq!(BigInt::from(0xabcdefu32).to_str_radix_upper(16), "ABCDEF");
 
         // 2進数での出力
-        assert_eq!(
-            BigInt::from(42u32).to_str_radix_upper(2),
-            "101010"
-        );
+        assert_eq!(BigInt::from(42u32).to_str_radix_upper(2), "101010");
 
         // 8進数での出力
-        assert_eq!(
-            BigInt::from(342391u32).to_str_radix_upper(8),
-            "1234567"
-        );
+        assert_eq!(BigInt::from(342391u32).to_str_radix_upper(8), "1234567");
 
         // 負の数の16進数での出力 (大文字)
-        assert_eq!(
-            BigInt::from(-0xabcdefi32).to_str_radix_upper(16),
-            "-ABCDEF"
-        );
+        assert_eq!(BigInt::from(-0xabcdefi32).to_str_radix_upper(16), "-ABCDEF");
     }
 }
