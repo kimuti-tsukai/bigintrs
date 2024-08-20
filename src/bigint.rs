@@ -1,6 +1,6 @@
-use std::ops::{
+use std::{num::IntErrorKind, ops::{
     Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign,
-};
+}};
 
 use crate::BigUint;
 
@@ -141,6 +141,51 @@ impl BigInt {
 
     pub fn is_negative(&self) -> bool {
         self.sign == Sign::Negative
+    }
+
+    pub fn from_str_radix(src: &str, radix: u32) -> Result<Self, IntErrorKind> {
+        if !(2..=36).contains(&radix) {
+            panic!(
+                "from_str_radix_int: must lie in the range `[2, 36]` - found {}",
+                radix
+            );
+        }
+
+        if src.is_empty() {
+            return Err(IntErrorKind::Empty);
+        }
+
+        let src = src.as_bytes();
+
+        let (is_positive, mut digits) = match src {
+            [b'+' | b'-'] => return Err(IntErrorKind::InvalidDigit),
+            [b'+', rest @ ..] => (true, rest),
+            [b'-', rest @ ..] => (false, rest),
+            _ => (true, src),
+        };
+
+        let mut result = Self::zero();
+
+        macro_rules! c_loop {
+            ($assign_op: tt) => {
+                while let [c, rest @ ..] = digits {
+                    result *= Self::from(radix);
+                    let Some(x) = (*c as char).to_digit(radix) else {
+                        return Err(IntErrorKind::InvalidDigit);
+                    };
+                    result $assign_op Self::from(x);
+                    digits = rest;
+                }
+            };
+        }
+
+        if is_positive {
+            c_loop!(+=);
+        } else {
+            c_loop!(-=);
+        }
+
+        Ok(result)
     }
 }
 
@@ -411,5 +456,47 @@ mod test {
 
         // -100 % -3 = -1
         assert_eq!(BigInt::from(-100) % BigInt::from(-3), BigInt::from(-1));
+    }
+
+    #[test]
+    fn from_str_radix() {
+        // 10進数の文字列を BigInt に変換
+        assert_eq!(
+            BigInt::from_str_radix("1234567890", 10).unwrap(),
+            BigInt::from(1234567890u32)
+        );
+
+        // 16進数の文字列を BigInt に変換 (小文字)
+        assert_eq!(
+            BigInt::from_str_radix("abcdef", 16).unwrap(),
+            BigInt::from(0xabcdefu32)
+        );
+
+        // 16進数の文字列を BigInt に変換 (大文字)
+        assert_eq!(
+            BigInt::from_str_radix("ABCDEF", 16).unwrap(),
+            BigInt::from(0xABCDEFu32)
+        );
+
+        // 2進数の文字列を BigInt に変換
+        assert_eq!(
+            BigInt::from_str_radix("101010", 2).unwrap(),
+            BigInt::from(42u32)
+        );
+
+        // 8進数の文字列を BigInt に変換
+        assert_eq!(
+            BigInt::from_str_radix("1234567", 8).unwrap(),
+            BigInt::from(342391u32)
+        );
+
+        // 負の数の16進数の文字列を BigInt に変換
+        assert_eq!(
+            BigInt::from_str_radix("-ABCDEF", 16).unwrap(),
+            BigInt::from(-0xABCDEFi32)
+        );
+
+        // 無効な文字列のパース (基数外の文字)
+        assert!(BigInt::from_str_radix("GHIJKL", 16).is_err());
     }
 }
