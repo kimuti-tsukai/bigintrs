@@ -301,3 +301,120 @@ impl_for_ref_to_owned!(
     Div, div;
     Rem, rem
 );
+
+#[cfg(test)]
+mod test {
+    #[allow(unused_imports)]
+    use super::*;
+
+    #[test]
+    fn addition() {
+        // 100 + 200 = 300
+        assert_eq!(
+            BigInt::from(100u32) + BigInt::from(200u32),
+            BigInt::from(300u32)
+        );
+
+        // -50 + 50 = 0
+        assert_eq!(
+            BigInt::from(-50) + BigInt::from(50),
+            BigInt::zero()
+        );
+
+        // -100 + (-200) = -300
+        assert_eq!(
+            BigInt::from(-100) + BigInt::from(-200),
+            BigInt::from(-300)
+        );
+    }
+
+    #[test]
+    fn subtraction() {
+        // 300 - 100 = 200
+        assert_eq!(
+            BigInt::from(300u32) - BigInt::from(100u32),
+            BigInt::from(200u32)
+        );
+
+        // -50 - 50 = -100
+        assert_eq!(
+            BigInt::from(-50) - BigInt::from(50),
+            BigInt::from(-100)
+        );
+
+        // 100 - (-200) = 300
+        assert_eq!(
+            BigInt::from(100) - BigInt::from(-200),
+            BigInt::from(300)
+        );
+    }
+
+    #[test]
+    fn multiplication() {
+        // 50 * 2 = 100
+        assert_eq!(
+            BigInt::from(50u32) * BigInt::from(2u32),
+            BigInt::from(100u32)
+        );
+
+        // -50 * 2 = -100
+        assert_eq!(
+            BigInt::from(-50) * BigInt::from(2),
+            BigInt::from(-100)
+        );
+
+        // -50 * (-2) = 100
+        assert_eq!(
+            BigInt::from(-50) * BigInt::from(-2),
+            BigInt::from(100)
+        );
+    }
+
+    #[test]
+    fn division() {
+        // 100 / 2 = 50
+        assert_eq!(
+            BigInt::from(100u32) / BigInt::from(2u32),
+            BigInt::from(50u32)
+        );
+
+        // -100 / 2 = -50
+        assert_eq!(
+            BigInt::from(-100) / BigInt::from(2),
+            BigInt::from(-50)
+        );
+
+        // -100 / -2 = 50
+        assert_eq!(
+            BigInt::from(-100) / BigInt::from(-2),
+            BigInt::from(50)
+        );
+    }
+
+    #[test]
+    fn remainder() {
+        // 100 % 3 = 1
+        assert_eq!(
+            BigInt::from(100u32) % BigInt::from(3u32),
+            BigInt::from(1u32)
+        );
+
+        // -100 % 3 = -1
+        assert_eq!(
+            BigInt::from(-100) % BigInt::from(3),
+            BigInt::from(-1)
+        );
+
+        // 100 % -3 = 1
+        assert_eq!(
+            BigInt::from(100) % BigInt::from(-3),
+            BigInt::from(1)
+        );
+
+        // -100 % -3 = -1
+        assert_eq!(
+            BigInt::from(-100) % BigInt::from(-3),
+            BigInt::from(-1)
+        );
+    }
+}
