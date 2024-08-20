@@ -1,4 +1,4 @@
-use std::ops::{Add, Neg, Sub};
+use std::ops::{Add, Mul, Neg, Sub};
 
 use crate::BigUint;
 
@@ -159,5 +159,24 @@ impl Sub for BigInt {
 
     fn sub(self, rhs: Self) -> Self::Output {
         self + (-rhs)
+    }
+}
+
+impl Mul for BigInt {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        if self.is_zero() || rhs.is_zero() {
+            Self::zero()
+        } else {
+            Self {
+                sign: if self.sign == rhs.sign {
+                    Sign::Positive
+                } else {
+                    Sign::Negative
+                },
+                value: &self.value * &rhs.value,
+            }
+        }
     }
 }
