@@ -1,4 +1,4 @@
-use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign};
 
 use crate::BigUint;
 
@@ -66,6 +66,16 @@ macro_rules! impl_assign_for_ref {
             impl_assign_for_ref!($trait, $method);
         )+
     };
+}
+
+macro_rules! impl_assign_ops {
+    ($($trait: ty, $assign_method: ident, $method: ident);+) => {$(
+        impl $trait for BigInt {
+            fn $assign_method(&mut self, rhs: Self) {
+                *self = self.clone().$method(rhs);
+            }
+        }
+    )+};
 }
 
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
@@ -300,6 +310,22 @@ impl_for_ref_to_owned!(
     Mul, mul;
     Div, div;
     Rem, rem
+);
+
+impl_assign_ops!(
+    AddAssign, add_assign, add;
+    SubAssign, sub_assign, sub;
+    MulAssign, mul_assign, mul;
+    DivAssign, div_assign, div;
+    RemAssign, rem_assign, rem
+);
+
+impl_assign_for_ref!(
+    AddAssign, add_assign;
+    SubAssign, sub_assign;
+    MulAssign, mul_assign;
+    DivAssign, div_assign;
+    RemAssign, rem_assign
 );
 
 #[cfg(test)]
