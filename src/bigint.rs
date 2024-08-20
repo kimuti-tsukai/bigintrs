@@ -1,4 +1,4 @@
-use std::ops::{Add, Neg};
+use std::ops::{Add, Neg, Sub};
 
 use crate::BigUint;
 
@@ -151,5 +151,13 @@ impl Add for BigInt {
                 value,
             }
         }
+    }
+}
+
+impl Sub for BigInt {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        self + (-rhs)
     }
 }
