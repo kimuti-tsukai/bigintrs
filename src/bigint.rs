@@ -1,4 +1,6 @@
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign};
+use std::ops::{
+    Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign,
+};
 
 use crate::BigUint;
 
@@ -342,16 +344,10 @@ mod test {
         );
 
         // -50 + 50 = 0
-        assert_eq!(
-            BigInt::from(-50) + BigInt::from(50),
-            BigInt::zero()
-        );
+        assert_eq!(BigInt::from(-50) + BigInt::from(50), BigInt::zero());
 
         // -100 + (-200) = -300
-        assert_eq!(
-            BigInt::from(-100) + BigInt::from(-200),
-            BigInt::from(-300)
-        );
+        assert_eq!(BigInt::from(-100) + BigInt::from(-200), BigInt::from(-300));
     }
 
     #[test]
@@ -363,16 +359,10 @@ mod test {
         );
 
         // -50 - 50 = -100
-        assert_eq!(
-            BigInt::from(-50) - BigInt::from(50),
-            BigInt::from(-100)
-        );
+        assert_eq!(BigInt::from(-50) - BigInt::from(50), BigInt::from(-100));
 
         // 100 - (-200) = 300
-        assert_eq!(
-            BigInt::from(100) - BigInt::from(-200),
-            BigInt::from(300)
-        );
+        assert_eq!(BigInt::from(100) - BigInt::from(-200), BigInt::from(300));
     }
 
     #[test]
@@ -384,16 +374,10 @@ mod test {
         );
 
         // -50 * 2 = -100
-        assert_eq!(
-            BigInt::from(-50) * BigInt::from(2),
-            BigInt::from(-100)
-        );
+        assert_eq!(BigInt::from(-50) * BigInt::from(2), BigInt::from(-100));
 
         // -50 * (-2) = 100
-        assert_eq!(
-            BigInt::from(-50) * BigInt::from(-2),
-            BigInt::from(100)
-        );
+        assert_eq!(BigInt::from(-50) * BigInt::from(-2), BigInt::from(100));
     }
 
     #[test]
@@ -405,16 +389,10 @@ mod test {
         );
 
         // -100 / 2 = -50
-        assert_eq!(
-            BigInt::from(-100) / BigInt::from(2),
-            BigInt::from(-50)
-        );
+        assert_eq!(BigInt::from(-100) / BigInt::from(2), BigInt::from(-50));
 
         // -100 / -2 = 50
-        assert_eq!(
-            BigInt::from(-100) / BigInt::from(-2),
-            BigInt::from(50)
-        );
+        assert_eq!(BigInt::from(-100) / BigInt::from(-2), BigInt::from(50));
     }
 
     #[test]
@@ -426,21 +404,12 @@ mod test {
         );
 
         // -100 % 3 = -1
-        assert_eq!(
-            BigInt::from(-100) % BigInt::from(3),
-            BigInt::from(-1)
-        );
+        assert_eq!(BigInt::from(-100) % BigInt::from(3), BigInt::from(-1));
 
         // 100 % -3 = 1
-        assert_eq!(
-            BigInt::from(100) % BigInt::from(-3),
-            BigInt::from(1)
-        );
+        assert_eq!(BigInt::from(100) % BigInt::from(-3), BigInt::from(1));
 
         // -100 % -3 = -1
-        assert_eq!(
-            BigInt::from(-100) % BigInt::from(-3),
-            BigInt::from(-1)
-        );
+        assert_eq!(BigInt::from(-100) % BigInt::from(-3), BigInt::from(-1));
     }
 }
