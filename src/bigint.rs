@@ -1,4 +1,4 @@
-use std::ops::{Add, Mul, Neg, Sub};
+use std::ops::{Add, Div, Mul, Neg, Sub};
 
 use crate::BigUint;
 
@@ -176,6 +176,29 @@ impl Mul for BigInt {
                     Sign::Negative
                 },
                 value: &self.value * &rhs.value,
+            }
+        }
+    }
+}
+
+impl Div for BigInt {
+    type Output = Self;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        if rhs.is_zero() {
+            panic!("attempt to divide by zero");
+        }
+
+        if self.is_zero() {
+            Self::zero()
+        } else {
+            Self {
+                sign: if self.sign == rhs.sign {
+                    Sign::Positive
+                } else {
+                    Sign::Negative
+                },
+                value: &self.value / &rhs.value,
             }
         }
     }
