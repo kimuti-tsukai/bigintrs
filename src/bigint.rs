@@ -268,7 +268,7 @@ impl TryFrom<BigInt> for BigUint {
         match value.sign {
             Sign::Zero => Ok(BigUint::zero()),
             Sign::Positive => Ok(value.value),
-            Sign::Negative => Err(IntErrorKind::NegOverflow)
+            Sign::Negative => Err(IntErrorKind::NegOverflow),
         }
     }
 }
@@ -292,6 +292,55 @@ macro_rules! impl_from_signed_int {
 }
 
 impl_from_signed_int!(i8, i16, i32, i64, i128, isize);
+
+macro_rules! impl_try_from_BigInt_for_unsigned {
+    ($($type: ty),+) => {$(
+        impl TryFrom<BigInt> for $type {
+            type Error = IntErrorKind;
+
+            fn try_from(value: BigInt) -> Result<Self, Self::Error> {
+                match value.sign {
+                    Sign::Zero => Ok(0),
+                    Sign::Positive => Self::try_from(value.value),
+                    Sign::Negative => Err(IntErrorKind::NegOverflow),
+                }
+            }
+        }
+    )+};
+}
+
+impl_try_from_BigInt_for_unsigned!(u8, u16, u32, u64, u128, usize);
+
+macro_rules! impl_try_from_BigInt_for_signed {
+    ($($type: ty, $unsigned: ty);+) => {$(
+        impl TryFrom<BigInt> for $type {
+            type Error = IntErrorKind;
+
+            fn try_from(value: BigInt) -> Result<Self, Self::Error> {
+                if value < BigInt::from(Self::MIN) {
+                    Err(IntErrorKind::NegOverflow)
+                } else if BigInt::from(Self::MAX) < value {
+                    Err(IntErrorKind::PosOverflow)
+                } else {
+                    match value.sign {
+                        Sign::Zero => Ok(0),
+                        Sign::Positive => Ok(<$unsigned>::try_from(value.value).unwrap() as $type),
+                        Sign::Negative => Ok(-(<$unsigned>::try_from(value.value).unwrap() as $type)),
+                    }
+                }
+            }
+        }
+    )+};
+}
+
+impl_try_from_BigInt_for_signed!(
+    i8, u8;
+    i16, u16;
+    i32, u32;
+    i64, u64;
+    i128, u128;
+    isize, usize
+);
 
 impl Neg for BigInt {
     type Output = Self;
