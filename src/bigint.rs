@@ -443,6 +443,15 @@ impl Neg for BigInt {
     }
 }
 
+impl Neg for &BigInt {
+    type Output = BigInt;
+
+    fn neg(self) -> Self::Output {
+        -self.clone()
+    }
+}
+
+
 impl Add for BigInt {
     type Output = Self;
 
