@@ -1,4 +1,5 @@
 use std::{
+    cmp::Ordering,
     fmt::{Binary, Display, LowerHex, Octal, UpperHex},
     num::IntErrorKind,
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign},
@@ -93,6 +94,18 @@ enum Sign {
 impl Default for Sign {
     fn default() -> Self {
         Self::Positive
+    }
+}
+
+impl PartialOrd for Sign {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Sign {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        (*self as i8).cmp(&(*other as i8))
     }
 }
 
@@ -397,6 +410,22 @@ impl_assign_for_ref!(
     RemAssign, rem_assign
 );
 
+impl PartialOrd for BigInt {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for BigInt {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.sign.cmp(&other.sign).then_with(|| match self.sign {
+            Sign::Zero => Ordering::Equal,
+            Sign::Positive => self.value.cmp(&other.value),
+            Sign::Negative => self.value.cmp(&other.value).reverse(),
+        })
+    }
+}
+
 impl FromStr for BigInt {
     type Err = IntErrorKind;
 
@@ -602,5 +631,62 @@ mod test {
 
         // 負の数の16進数での出力 (大文字)
         assert_eq!(BigInt::from(-0xabcdefi32).to_str_radix_upper(16), "-ABCDEF");
+    }
+
+    #[test]
+    fn ord() {
+        // 大きな正の数と小さな正の数
+        assert_eq!(
+            BigInt::from(1000u32).cmp(&BigInt::from(100u32)),
+            std::cmp::Ordering::Greater
+        );
+
+        // 同じ値の比較
+        assert_eq!(
+            BigInt::from(500u32).cmp(&BigInt::from(500u32)),
+            std::cmp::Ordering::Equal
+        );
+
+        // 小さな正の数と大きな正の数
+        assert_eq!(
+            BigInt::from(100u32).cmp(&BigInt::from(1000u32)),
+            std::cmp::Ordering::Less
+        );
+
+        // 負の数と正の数
+        assert_eq!(
+            BigInt::from(-100).cmp(&BigInt::from(100)),
+            std::cmp::Ordering::Less
+        );
+
+        // 同じ負の数
+        assert_eq!(
+            BigInt::from(-500).cmp(&BigInt::from(-500)),
+            std::cmp::Ordering::Equal
+        );
+
+        // 負の数同士の比較（絶対値が大きい方が小さいと評価される）
+        assert_eq!(
+            BigInt::from(-1000).cmp(&BigInt::from(-100)),
+            std::cmp::Ordering::Less
+        );
+
+        // 0と正の数
+        assert_eq!(
+            BigInt::zero().cmp(&BigInt::from(100)),
+            std::cmp::Ordering::Less
+        );
+
+        // 0と負の数
+        assert_eq!(
+            BigInt::zero().cmp(&BigInt::from(-100)),
+            std::cmp::Ordering::Greater
+        );
+
+        // 0と0
+        assert_eq!(
+            BigInt::zero().cmp(&BigInt::zero()),
+            std::cmp::Ordering::Equal
+        );
     }
 }
