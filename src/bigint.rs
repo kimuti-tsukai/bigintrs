@@ -261,6 +261,18 @@ macro_rules! impl_from_unsigned_int {
 
 impl_from_unsigned_int!(u8, u16, u32, u64, u128, usize);
 
+impl TryFrom<BigInt> for BigUint {
+    type Error = IntErrorKind;
+
+    fn try_from(value: BigInt) -> Result<Self, Self::Error> {
+        match value.sign {
+            Sign::Zero => Ok(BigUint::zero()),
+            Sign::Positive => Ok(value.value),
+            Sign::Negative => Err(IntErrorKind::NegOverflow)
+        }
+    }
+}
+
 macro_rules! impl_from_signed_int {
     ($($type: ty),+) => {$(
         impl From<$type> for BigInt {
