@@ -274,6 +274,49 @@ impl BigInt {
             Self::from(unsigned_pow)
         }
     }
+
+    pub fn checked_ilog(self, base: Self) -> Option<u32> {
+        if self.is_negative() {
+            None
+        } else {
+            self.value.checked_ilog(base.value)
+        }
+    }
+
+    pub fn checked_ilog2(self) -> Option<u32> {
+        if self.is_negative() {
+            None
+        } else {
+            self.value.checked_ilog2()
+        }
+    }
+
+    pub fn checked_ilog10(self) -> Option<u32> {
+        if self.is_negative() {
+            None
+        } else {
+            self.value.checked_ilog10()
+        }
+    }
+
+    pub fn ilog(self, base: Self) -> u32 {
+        assert!(
+            base >= Self::from(2u8),
+            "base of integer logarithm must be at least 2"
+        );
+        self.checked_ilog(base)
+            .unwrap_or_else(|| panic!("argument of integer logarithm must be positive"))
+    }
+
+    pub fn ilog2(self) -> u32 {
+        self.checked_ilog2()
+            .unwrap_or_else(|| panic!("argument of integer logarithm must be positive"))
+    }
+
+    pub fn ilog10(self) -> u32 {
+        self.checked_ilog10()
+            .unwrap_or_else(|| panic!("argument of integer logarithm must be positive"))
+    }
 }
 
 impl From<BigUint> for BigInt {
