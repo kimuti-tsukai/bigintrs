@@ -230,6 +230,10 @@ impl BigInt {
             self
         }
     }
+
+    pub fn abs_diff(self, rhs: Self) -> Self {
+        (self - rhs).abs()
+    }
 }
 
 impl From<BigUint> for BigInt {
