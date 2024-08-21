@@ -222,6 +222,14 @@ impl BigInt {
     pub fn to_str_radix_upper(self, radix: u32) -> String {
         self.to_str_radix_lower(radix).to_ascii_uppercase()
     }
+
+    pub fn abs(self) -> Self {
+        if self.is_negative() {
+            -self
+        } else {
+            self
+        }
+    }
 }
 
 impl From<BigUint> for BigInt {
