@@ -252,6 +252,28 @@ impl BigInt {
             rem
         }
     }
+
+    pub fn pow(self, rhs: u32) -> Self {
+        let Self { sign, value } = self;
+        let unsigned_pow = value.pow(rhs);
+
+        if sign == Sign::Negative && rhs % 2 == 1 {
+            -Self::from(unsigned_pow)
+        } else {
+            Self::from(unsigned_pow)
+        }
+    }
+
+    pub fn pow_big(self, rhs: BigUint) -> Self {
+        let Self { sign, value } = self;
+        let unsigned_pow = value.pow_big(rhs.clone());
+
+        if sign == Sign::Negative && (rhs % BigUint::from(2u8)).is_one() {
+            -Self::from(unsigned_pow)
+        } else {
+            Self::from(unsigned_pow)
+        }
+    }
 }
 
 impl From<BigUint> for BigInt {
