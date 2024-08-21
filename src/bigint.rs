@@ -234,6 +234,24 @@ impl BigInt {
     pub fn abs_diff(self, rhs: Self) -> Self {
         (self - rhs).abs()
     }
+
+    pub fn div_euclid(self, rhs: Self) -> Self {
+        if self.is_negative() && !(&self % &rhs).is_zero() {
+            self / rhs + Self::one()
+        } else {
+            self / rhs
+        }
+    }
+
+    pub fn rem_euclid(self, rhs: Self) -> Self {
+        let rem = &self % &rhs;
+
+        if rem.is_negative() {
+            rhs + rem
+        } else {
+            rem
+        }
+    }
 }
 
 impl From<BigUint> for BigInt {
