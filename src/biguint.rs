@@ -888,9 +888,9 @@ impl Ord for BigUint {
         match self.value.len().cmp(&other.value.len()) {
             Ordering::Equal => {
                 for (s, o) in self.value.iter().zip(other.value.iter()) {
-                    match s.cmp(o) {
-                        Ordering::Equal => {}
-                        order => return order,
+                    let order = s.cmp(o);
+                    if order != Ordering::Equal {
+                        return order;
                     }
                 }
 
