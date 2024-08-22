@@ -1,13 +1,8 @@
 use std::{
-    borrow::{Borrow, BorrowMut},
-    cmp::{self, Ordering},
-    fmt::{Binary, Display, LowerHex, Octal, UpperHex},
-    num::IntErrorKind,
-    ops::{
+    borrow::{Borrow, BorrowMut}, cmp::{self, Ordering}, fmt::{Binary, Display, LowerHex, Octal, UpperHex}, num::IntErrorKind, ops::{
         Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Div,
         DivAssign, Mul, MulAssign, Rem, RemAssign, Shl, ShlAssign, Shr, ShrAssign, Sub, SubAssign,
-    },
-    str::FromStr,
+    }, slice::Iter, str::FromStr
 };
 
 #[allow(unused_macros)]
@@ -100,13 +95,13 @@ impl BigUint {
     }
 
     pub fn valid_bits(&self) -> u32 {
-        let first = self.value.first().unwrap();
+        let first: &u8 = self.value.first().unwrap();
 
         self.bits() - first.leading_zeros()
     }
 
     pub fn count_ones(&self) -> usize {
-        let mut result = 0;
+        let mut result: usize = 0;
 
         for i in &self.value {
             result += i.count_ones() as usize;
@@ -116,7 +111,7 @@ impl BigUint {
     }
 
     pub fn long_mul(self, mut rhs: Self) -> Self {
-        let mut result = BigUint::new();
+        let mut result: BigUint = BigUint::new();
 
         for i in 0..rhs.bits() {
             if rhs.value.last().unwrap() & 1 == 1 {
@@ -134,29 +129,29 @@ impl BigUint {
     }
 
     fn _karatsuba_mul(&self, other: &BigUint) -> Self {
-        let n = self.value.len().max(other.value.len());
+        let n: usize = self.value.len().max(other.value.len());
 
         if n <= 32 {
             return self.clone().long_mul(other.clone());
         }
 
-        let m = n / 2;
+        let m: usize = n / 2;
 
-        let (x1, x0) = self.split(m);
-        let (y1, y0) = other.split(m);
+        let (x1, x0): (BigUint, BigUint) = self.split(m);
+        let (y1, y0): (BigUint, BigUint) = other.split(m);
 
-        let z2 = x1._karatsuba_mul(&y1);
-        let z0 = x0._karatsuba_mul(&y0);
-        let z1 = (x1 + x0)._karatsuba_mul(&(y1 + y0)) - &z2 - &z0;
+        let z2: BigUint = x1._karatsuba_mul(&y1);
+        let z0: BigUint = x0._karatsuba_mul(&y0);
+        let z1: BigUint = (x1 + x0)._karatsuba_mul(&(y1 + y0)) - &z2 - &z0;
 
         (z2 << (2 * m * 8)) + (z1 << (m * 8)) + z0
     }
 
     fn split(&self, mid: usize) -> (BigUint, BigUint) {
-        let low_part = BigUint {
+        let low_part: BigUint = BigUint {
             value: self.value[..mid].to_vec(),
         };
-        let high_part = BigUint {
+        let high_part: BigUint = BigUint {
             value: self.value[mid..].to_vec(),
         };
         (low_part, high_part)
@@ -168,7 +163,7 @@ impl BigUint {
         } else if rhs % 2 == 1 {
             &self * self.clone().pow(rhs - 1)
         } else {
-            let a = self.pow(rhs / 2);
+            let a: BigUint = self.pow(rhs / 2);
             &a * &a
         }
     }
@@ -179,7 +174,7 @@ impl BigUint {
         } else if (&rhs % BigUint::from(2u8)).is_one() {
             &self * self.clone().pow_big(rhs - BigUint::one())
         } else {
-            let a = self.pow_big(rhs / BigUint::from(2u8));
+            let a: BigUint = self.pow_big(rhs / BigUint::from(2u8));
             &a * &a
         }
     }
@@ -204,9 +199,9 @@ impl BigUint {
             return Err(IntErrorKind::Empty);
         }
 
-        let src = src.as_bytes();
+        let src: &[u8] = src.as_bytes();
 
-        let (is_positive, mut digits) = match src {
+        let (is_positive, mut digits): (bool, &[u8]) = match src {
             [b'+' | b'-'] => return Err(IntErrorKind::InvalidDigit),
             [b'+', rest @ ..] => (true, rest),
             [b'-', rest @ ..] => (false, rest),
@@ -217,7 +212,7 @@ impl BigUint {
             return Err(IntErrorKind::NegOverflow);
         }
 
-        let mut result = BigUint::zero();
+        let mut result: BigUint = BigUint::zero();
 
         while let [c, rest @ ..] = digits {
             result *= BigUint::from(radix);
@@ -239,12 +234,12 @@ impl BigUint {
             );
         }
 
-        let mut chars = Vec::new();
+        let mut chars: Vec<char> = Vec::new();
 
-        let mut src = self;
+        let mut src: BigUint = self;
 
         while !src.is_zero() {
-            let push =
+            let push: char =
                 char::from_digit((&src % BigUint::from(radix)).try_into().unwrap(), radix).unwrap();
 
             chars.push(push);
@@ -361,7 +356,7 @@ impl BigUint {
                 .value
                 .into_iter()
                 .rev()
-                .skip_while(|v| *v == 0)
+                .skip_while(|v: &u8| *v == 0)
                 .collect(),
         }
     }
@@ -371,9 +366,9 @@ impl BigUint {
     }
 
     pub fn from_be_bytes(bytes: &[u8]) -> Self {
-        let mut result = BigUint::none();
+        let mut result: BigUint = BigUint::none();
 
-        for i in bytes.iter().skip_while(|&v| *v == 0) {
+        for i in bytes.iter().skip_while(|&v: &&u8| *v == 0) {
             result.push(*i)
         }
 
@@ -385,9 +380,9 @@ impl BigUint {
     }
 
     pub fn from_le_bytes(bytes: &[u8]) -> Self {
-        let mut result = BigUint::none();
+        let mut result: BigUint = BigUint::none();
 
-        for i in bytes.iter().rev().skip_while(|&v| *v == 0) {
+        for i in bytes.iter().rev().skip_while(|&v: &&u8| *v == 0) {
             result.push(*i)
         }
 
@@ -419,14 +414,14 @@ impl BigUint {
     }
 
     pub fn to_le_bytes(self) -> Box<[u8]> {
-        let mut vec = self.value;
+        let mut vec: Vec<u8> = self.value;
         vec.reverse();
 
         vec.as_slice().into()
     }
 
     pub fn to_le_bytes_vec(self) -> Vec<u8> {
-        let mut vec = self.value;
+        let mut vec: Vec<u8> = self.value;
         vec.reverse();
 
         vec
@@ -449,9 +444,9 @@ impl BigUint {
     }
 
     pub fn leading_ones(&self) -> u32 {
-        let mut result = 0;
+        let mut result: u32 = 0;
 
-        let mut it = self.value.iter();
+        let mut it: Iter<u8> = self.value.iter();
         while it.next().unwrap_or(&0).leading_ones() == 8 {
             result += 8;
         }
@@ -466,9 +461,9 @@ impl BigUint {
     }
 
     pub fn trailing_ones(&self) -> u32 {
-        let mut result = 0;
+        let mut result: u32 = 0;
 
-        let mut it = self.value.iter();
+        let mut it: Iter<u8> = self.value.iter();
         while it.next_back().unwrap_or(&0).trailing_ones() == 8 {
             result += 8;
         }
@@ -487,9 +482,9 @@ impl BigUint {
             panic!("trailing zero is infinity");
         }
 
-        let mut result = 0;
+        let mut result: u32 = 0;
 
-        let mut it = self.value.iter();
+        let mut it: Iter<u8> = self.value.iter();
         while it.next_back().unwrap_or(&0).trailing_zeros() == 8 {
             result += 8;
         }
@@ -517,9 +512,9 @@ impl BigUint {
         } else if self < base {
             Some(0)
         } else {
-            let mut pow = Self::one();
+            let mut pow: BigUint = Self::one();
 
-            let mut counter = 0;
+            let mut counter: u32 = 0;
 
             if self.bytes() >= 16 {
                 counter = self.clone().ilog2() / (base.clone().ilog2() + 1)
@@ -604,9 +599,9 @@ macro_rules! impl_from_unsigned_int {
     ($type: ty) => {
         impl From<$type> for BigUint {
             fn from(value: $type) -> BigUint {
-                let mut result = BigUint::none();
+                let mut result: BigUint = BigUint::none();
 
-                for i in value.to_be_bytes().into_iter().skip_while(|v| v == &0) {
+                for i in value.to_be_bytes().into_iter().skip_while(|v: &u8| *v == 0) {
                     result.push(i);
                 }
 
@@ -799,15 +794,15 @@ macro_rules! impl_bit_ops {
             type Output = Self;
 
             fn $method(mut self, mut rhs: Self) -> Self::Output {
-                let mut new = Vec::new();
+                let mut new: Vec<u8> = Vec::new();
 
                 for _ in 0..cmp::max(self.value.len(), rhs.value.len()) {
-                    let push = self.value.pop().unwrap_or_default() $op rhs.value.pop().unwrap_or_default();
+                    let push: u8 = self.value.pop().unwrap_or_default() $op rhs.value.pop().unwrap_or_default();
 
                     new.push(push);
                 }
 
-                let mut result: Vec<u8> = new.into_iter().rev().skip_while(|v| v == &0).collect();
+                let mut result: Vec<u8> = new.into_iter().rev().skip_while(|v: &u8| *v == 0).collect();
 
                 if result.is_empty() {
                     result.push(0);
@@ -852,7 +847,7 @@ macro_rules! impl_bit_assign_ops {
     ($trait:ty, $method:ident, $op: tt) => {
         impl $trait for BigUint {
             fn $method(&mut self, rhs: Self) {
-                let change = self.clone() $op rhs;
+                let change: BigUint = self.clone() $op rhs;
 
                 *self = change;
             }
@@ -888,7 +883,7 @@ impl Ord for BigUint {
         match self.value.len().cmp(&other.value.len()) {
             Ordering::Equal => {
                 for (s, o) in self.value.iter().zip(other.value.iter()) {
-                    let order = s.cmp(o);
+                    let order: Ordering = s.cmp(o);
                     if order != Ordering::Equal {
                         return order;
                     }
@@ -920,10 +915,10 @@ macro_rules! impl_shr_and_shl_unsigned {
                 if rhs == 0 {
                     self
                 } else {
-                    let mut result = BigUint::none();
+                    let mut result: BigUint = BigUint::none();
 
-                    let mut is_firstloop = true;
-                    let mut next = 0;
+                    let mut is_firstloop: bool = true;
+                    let mut next: u8 = 0;
                     for i in self.value {
                         if is_firstloop {
                             if i >> rhs != 0 {
@@ -947,7 +942,7 @@ macro_rules! impl_shr_and_shl_unsigned {
             type Output = Self;
 
             fn shl(self, rhs: $type) -> Self::Output {
-                let mut result = self;
+                let mut result: BigUint = self;
 
                 for _ in 0..rhs.div_ceil(8) {
                     result.push(0);
@@ -1006,21 +1001,21 @@ impl Shr for BigUint {
             return BigUint::new();
         }
 
-        let mut cnt = &rhs / BigUint::from(8u8);
+        let mut cnt: BigUint = &rhs / BigUint::from(8u8);
         while cnt > BigUint::zero() {
             self.value.pop();
             cnt.decrement();
         }
 
-        let rhs = u8::try_from(rhs % BigUint::from(8u8)).unwrap();
+        let rhs: u8 = u8::try_from(rhs % BigUint::from(8u8)).unwrap();
 
         if rhs == 0 {
             self
         } else {
-            let mut result = BigUint::none();
+            let mut result: BigUint = BigUint::none();
 
-            let mut is_firstloop = true;
-            let mut next = 0;
+            let mut is_firstloop: bool = true;
+            let mut next: u8 = 0;
             for i in self.value {
                 if is_firstloop {
                     if i >> rhs != 0 {
@@ -1044,9 +1039,9 @@ impl Shl for BigUint {
     type Output = Self;
 
     fn shl(self, rhs: Self) -> Self::Output {
-        let mut result = self;
+        let mut result: BigUint = self;
 
-        let mut counter = rhs.clone().div_ceil(BigUint::from(8u8));
+        let mut counter: BigUint = rhs.clone().div_ceil(BigUint::from(8u8));
         while counter > BigUint::zero() {
             result.push(0);
 
@@ -1151,9 +1146,9 @@ impl Add for BigUint {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
-        let xor = &self ^ &rhs;
+        let xor: BigUint = &self ^ &rhs;
 
-        let carry = (&self & &rhs) << 1u8;
+        let carry: BigUint = (&self & &rhs) << 1u8;
 
         if carry.is_zero() {
             xor
@@ -1171,9 +1166,9 @@ impl Sub for BigUint {
             panic!("attempt to subtract with overflow");
         }
 
-        let xor = &self ^ &rhs;
+        let xor: BigUint = &self ^ &rhs;
 
-        let carry = ((&self ^ &rhs) & &rhs) << 1u8;
+        let carry: BigUint = ((&self ^ &rhs) & &rhs) << 1u8;
 
         if carry.is_zero() {
             xor
@@ -1241,11 +1236,11 @@ impl Div for BigUint {
             panic!("attempt to divide by zero");
         }
 
-        let mut result = BigUint::zero();
+        let mut result: BigUint = BigUint::zero();
 
         while self >= rhs {
-            let mut add = BigUint::one();
-            let mut sub = rhs.clone();
+            let mut add: BigUint = BigUint::one();
+            let mut sub: BigUint = rhs.clone();
 
             while self >= sub {
                 self -= &sub;
@@ -1301,7 +1296,7 @@ macro_rules! impl_fmt_radix_lower {
     ($trait: ty, $radix: expr) => {
         impl $trait for BigUint {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                let write = self.clone().to_str_radix_lower($radix);
+                let write: String = self.clone().to_str_radix_lower($radix);
 
                 write!(f, "{}", write)
             }
@@ -1323,7 +1318,7 @@ impl_fmt_radix_lower!(
 
 impl UpperHex for BigUint {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let write = self.clone().to_str_radix_upper(16);
+        let write: String = self.clone().to_str_radix_upper(16);
 
         write!(f, "{}", write)
     }
@@ -1500,8 +1495,8 @@ mod tests {
     #[test]
     #[should_panic(expected = "attempt to subtract with overflow")]
     fn overflow_subtract() {
-        let a = BigUint::from(891u32);
-        let b = BigUint::from(54u8);
+        let a: BigUint = BigUint::from(891u32);
+        let b: BigUint = BigUint::from(54u8);
         let _ = b - a;
     }
 

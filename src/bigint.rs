@@ -171,16 +171,16 @@ impl BigInt {
             return Err(IntErrorKind::Empty);
         }
 
-        let src = src.as_bytes();
+        let src: &[u8] = src.as_bytes();
 
-        let (is_positive, mut digits) = match src {
+        let (is_positive, mut digits): (bool, &[u8]) = match src {
             [b'+' | b'-'] => return Err(IntErrorKind::InvalidDigit),
             [b'+', rest @ ..] => (true, rest),
             [b'-', rest @ ..] => (false, rest),
             _ => (true, src),
         };
 
-        let mut result = Self::zero();
+        let mut result: BigInt = Self::zero();
 
         macro_rules! c_loop {
             ($assign_op: tt) => {
@@ -244,7 +244,7 @@ impl BigInt {
     }
 
     pub fn rem_euclid(self, rhs: Self) -> Self {
-        let rem = &self % &rhs;
+        let rem: BigInt = &self % &rhs;
 
         if rem.is_negative() {
             rhs + rem
@@ -254,8 +254,8 @@ impl BigInt {
     }
 
     pub fn pow(self, rhs: u32) -> Self {
-        let Self { sign, value } = self;
-        let unsigned_pow = value.pow(rhs);
+        let Self { sign, value }: Self = self;
+        let unsigned_pow: BigUint = value.pow(rhs);
 
         if sign == Sign::Negative && rhs % 2 == 1 {
             -Self::from(unsigned_pow)
@@ -265,8 +265,8 @@ impl BigInt {
     }
 
     pub fn pow_big(self, rhs: BigUint) -> Self {
-        let Self { sign, value } = self;
-        let unsigned_pow = value.pow_big(rhs.clone());
+        let Self { sign, value }: Self = self;
+        let unsigned_pow: BigUint = value.pow_big(rhs.clone());
 
         if sign == Sign::Negative && (rhs % BigUint::from(2u8)).is_one() {
             -Self::from(unsigned_pow)
@@ -468,9 +468,9 @@ impl Add for BigInt {
         } else if self.value == rhs.value {
             Self::zero()
         } else {
-            let value = self.value.clone().abs_diff(rhs.value.clone());
+            let value: BigUint = self.value.clone().abs_diff(rhs.value.clone());
             Self {
-                sign: std::cmp::max_by(self, rhs, |a, b| a.value.cmp(&b.value)).sign,
+                sign: std::cmp::max_by(self, rhs, |a: &BigInt, b: &BigInt| a.value.cmp(&b.value)).sign,
                 value,
             }
         }
@@ -603,7 +603,7 @@ macro_rules! impl_fmt_radix_lower {
     ($trait: ty, $radix: expr) => {
         impl $trait for BigInt {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                let write = self.clone().to_str_radix_lower($radix);
+                let write: String = self.clone().to_str_radix_lower($radix);
 
                 write!(f, "{}", write)
             }
@@ -625,7 +625,7 @@ impl_fmt_radix_lower!(
 
 impl UpperHex for BigInt {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let write = self.clone().to_str_radix_upper(16);
+        let write: String = self.clone().to_str_radix_upper(16);
 
         write!(f, "{}", write)
     }
