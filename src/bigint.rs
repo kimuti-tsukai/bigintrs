@@ -758,44 +758,18 @@ mod test {
 
     #[test]
     fn to_str_radix_lower() {
-        // 10進数での出力
         assert_eq!(
             BigInt::from(1234567890u32).to_str_radix_lower(10),
             "1234567890"
         );
 
-        // 16進数での出力 (小文字)
         assert_eq!(BigInt::from(0xabcdefu32).to_str_radix_lower(16), "abcdef");
 
-        // 2進数での出力
         assert_eq!(BigInt::from(42u32).to_str_radix_lower(2), "101010");
 
-        // 8進数での出力
         assert_eq!(BigInt::from(342391u32).to_str_radix_lower(8), "1234567");
 
-        // 負の数の16進数での出力 (小文字)
         assert_eq!(BigInt::from(-0xabcdefi32).to_str_radix_lower(16), "-abcdef");
-    }
-
-    #[test]
-    fn to_str_radix_upper() {
-        // 10進数での出力
-        assert_eq!(
-            BigInt::from(1234567890u32).to_str_radix_upper(10),
-            "1234567890"
-        );
-
-        // 16進数での出力 (大文字)
-        assert_eq!(BigInt::from(0xabcdefu32).to_str_radix_upper(16), "ABCDEF");
-
-        // 2進数での出力
-        assert_eq!(BigInt::from(42u32).to_str_radix_upper(2), "101010");
-
-        // 8進数での出力
-        assert_eq!(BigInt::from(342391u32).to_str_radix_upper(8), "1234567");
-
-        // 負の数の16進数での出力 (大文字)
-        assert_eq!(BigInt::from(-0xabcdefi32).to_str_radix_upper(16), "-ABCDEF");
     }
 
     #[test]

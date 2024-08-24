@@ -1,8 +1,14 @@
 use std::{
-    borrow::{Borrow, BorrowMut}, cmp::{self, Ordering}, fmt::{Binary, Display, LowerHex, Octal, UpperHex}, num::IntErrorKind, ops::{
+    borrow::{Borrow, BorrowMut},
+    cmp::{self, Ordering},
+    fmt::{Binary, Display, LowerHex, Octal, UpperHex},
+    num::IntErrorKind,
+    ops::{
         Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Div,
         DivAssign, Mul, MulAssign, Rem, RemAssign, Shl, ShlAssign, Shr, ShrAssign, Sub, SubAssign,
-    }, slice::Iter, str::FromStr
+    },
+    slice::Iter,
+    str::FromStr,
 };
 
 #[allow(unused_macros)]
