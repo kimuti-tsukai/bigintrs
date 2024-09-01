@@ -160,12 +160,11 @@ impl BigInt {
     }
 
     pub fn from_str_radix(src: &str, radix: u32) -> Result<Self, IntErrorKind> {
-        if !(2..=36).contains(&radix) {
-            panic!(
-                "from_str_radix_int: must lie in the range `[2, 36]` - found {}",
-                radix
-            );
-        }
+        assert!(
+            (2..=36).contains(&radix),
+            "from_str_radix_int: must lie in the range `[2, 36]` - found {}",
+            radix
+        );
 
         if src.is_empty() {
             return Err(IntErrorKind::Empty);
@@ -205,12 +204,11 @@ impl BigInt {
     }
 
     pub fn to_str_radix_lower(self, radix: u32) -> String {
-        if !(2..=36).contains(&radix) {
-            panic!(
-                "from_str_radix_int: must lie in the range `[2, 36]` - found {}",
-                radix
-            );
-        }
+        assert!(
+            (2..=36).contains(&radix),
+            "from_str_radix_int: must lie in the range `[2, 36]` - found {}",
+            radix
+        );
 
         match self.sign {
             Sign::Zero => String::from("0"),

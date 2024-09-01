@@ -159,13 +159,9 @@ impl BigUint {
         let z1_f: BigUint = (x1 + x0)._karatsuba_mul(&(y1 + y0));
         let z1_s: BigUint = &z2 + &z0;
 
-        if z1_f >= z1_s {
-            let z1: BigUint = z1_f - z1_s;
-            (z2 << (m << 1)) + z0 + (z1 << m)
-        } else {
-            let z1: BigUint = z1_s - z1_f;
-            (z2 << (m << 1)) + z0 - (z1 << m)
-        }
+        let z1: BigUint = z1_f - z1_s;
+
+        (z2 << (m << 1)) + z0 + (z1 << m)
     }
 
     fn split(&self, mid: u32) -> (BigUint, BigUint) {
@@ -205,12 +201,11 @@ impl BigUint {
     }
 
     pub fn from_str_radix(src: &str, radix: u32) -> Result<Self, IntErrorKind> {
-        if !(2..=36).contains(&radix) {
-            panic!(
-                "from_str_radix_int: must lie in the range `[2, 36]` - found {}",
-                radix
-            );
-        }
+        assert!(
+            (2..=36).contains(&radix),
+            "from_str_radix_int: must lie in the range `[2, 36]` - found {}",
+            radix
+        );
 
         if src.is_empty() {
             return Err(IntErrorKind::Empty);
@@ -244,12 +239,11 @@ impl BigUint {
     }
 
     pub fn to_str_radix_lower(self, radix: u32) -> String {
-        if !(2..=36).contains(&radix) {
-            panic!(
-                "from_str_radix_int: must lie in the range `[2, 36]` - found {}",
-                radix
-            );
-        }
+        assert!(
+            (2..=36).contains(&radix),
+            "from_str_radix_int: must lie in the range `[2, 36]` - found {}",
+            radix
+        );
 
         let mut chars: Vec<char> = Vec::new();
 
@@ -260,8 +254,6 @@ impl BigUint {
                 char::from_digit((&src % BigUint::from(radix)).try_into().unwrap(), radix).unwrap();
 
             chars.push(push);
-
-            println!("{:?}", &chars);
 
             src /= BigUint::from(radix);
         }
@@ -1781,8 +1773,15 @@ mod tests {
     }
 
     #[test]
-    fn memory() {
-        let _ = BigUint::from(10u8)
-            .pow_big(BigUint::from(10u8).pow_big(BigUint::from(10u8).pow_big(BigUint::from(10u8))));
+    fn debug() {
+        let mut a = BigUint::one();
+
+        let mut cnt = 0;
+
+        loop {
+            println!("{}", cnt);
+            a *= BigUint::from(10u8);
+            cnt += 1;
+        }
     }
 }
