@@ -13,13 +13,13 @@ use std::{
 
 #[allow(unused_macros)]
 macro_rules! dbg_biguint {
-    ($i: expr) => {
+    ($i: expr) => {{
         eprint!("[ {} ] = ", stringify!($i));
         for i in &$i.value {
             eprint!("{:0>8b} ", i);
         }
         eprintln!();
-    };
+    }};
 }
 
 trait CastUnsigned {
@@ -60,20 +60,22 @@ pub struct BigUint {
 }
 
 impl BigUint {
-    pub fn new() -> Self {
-        BigUint { value: vec![0] }
+    pub const ZERO: Self = Self::zero();
+
+    pub const fn new() -> Self {
+        BigUint { value: Vec::new() }
     }
 
-    pub fn min_value() -> Self {
+    pub const fn min_value() -> Self {
         BigUint::zero()
     }
 
-    pub fn zero() -> Self {
+    pub const fn zero() -> Self {
         BigUint::new()
     }
 
     pub fn is_zero(&self) -> bool {
-        *self == BigUint::from(0u8)
+        *self == Self::zero()
     }
 
     pub fn set_zero(&mut self) {
@@ -101,9 +103,11 @@ impl BigUint {
     }
 
     pub fn valid_bits(&self) -> u32 {
-        let first: &u8 = self.value.first().unwrap();
-
-        self.bits() - first.leading_zeros()
+        if let Some(first) = self.value.first() {
+            self.bits() - first.leading_zeros()
+        } else {
+            0
+        }
     }
 
     pub fn count_ones(&self) -> usize {
@@ -119,7 +123,7 @@ impl BigUint {
     pub fn long_mul(self, mut rhs: Self) -> Self {
         let mut result: BigUint = BigUint::new();
 
-        for i in 0..rhs.bits() {
+        for i in 0..rhs.valid_bits() {
             if rhs.value.last().unwrap() & 1 == 1 {
                 result += &self << i;
             }
@@ -135,31 +139,27 @@ impl BigUint {
     }
 
     fn _karatsuba_mul(&self, other: &BigUint) -> Self {
-        let n: usize = self.value.len().max(other.value.len());
+        let n: u32 = self.valid_bits().max(other.valid_bits());
 
         if n <= 32 {
             return self.clone().long_mul(other.clone());
         }
 
-        let m: usize = n / 2;
+        let m: u32 = n / 2;
 
         let (x1, x0): (BigUint, BigUint) = self.split(m);
         let (y1, y0): (BigUint, BigUint) = other.split(m);
 
         let z2: BigUint = x1._karatsuba_mul(&y1);
         let z0: BigUint = x0._karatsuba_mul(&y0);
-        let z1: BigUint = (x1 + x0)._karatsuba_mul(&(y1 + y0)) - &z2 - &z0;
+        let z1: BigUint = (x1 + x0)._karatsuba_mul(&(y1 + y0)) - (&z2 + &z0);
 
-        (z2 << (2 * m * 8)) + (z1 << (m * 8)) + z0
+        (z2 << (m << 1)) + (z1 << m) + z0
     }
 
-    fn split(&self, mid: usize) -> (BigUint, BigUint) {
-        let low_part: BigUint = BigUint {
-            value: self.value[..mid].to_vec(),
-        };
-        let high_part: BigUint = BigUint {
-            value: self.value[mid..].to_vec(),
-        };
+    fn split(&self, mid: u32) -> (BigUint, BigUint) {
+        let low_part: BigUint = self >> mid;
+        let high_part: BigUint = self - (&low_part << mid);
         (low_part, high_part)
     }
 
@@ -250,6 +250,8 @@ impl BigUint {
 
             chars.push(push);
 
+            println!("{:?}", &chars);
+
             src /= BigUint::from(radix);
         }
 
@@ -262,6 +264,54 @@ impl BigUint {
 
     pub fn to_str_radix_upper(self, radix: u32) -> String {
         self.to_str_radix_lower(radix).to_ascii_uppercase()
+    }
+
+    pub fn normal_div(mut self, rhs: Self) -> Self {
+        if rhs.is_zero() {
+            panic!("attempt to divide by zero");
+        }
+
+        let mut result: BigUint = BigUint::zero();
+
+        while self >= rhs {
+            let mut add: BigUint = BigUint::one();
+            let mut sub: BigUint = rhs.clone();
+
+            while self >= sub {
+                self -= &sub;
+
+                result += &add;
+
+                sub <<= 1u8;
+                add <<= 1u8;
+            }
+        }
+
+        result
+    }
+
+    pub fn binary_div(self, rhs: Self) -> Self {
+        if rhs.is_zero() {
+            panic!("attempt to divide by zero");
+        }
+
+        if rhs.is_one() {
+            return self
+        }
+
+        let (mut l, mut r) = (Self::zero(), self.clone());
+
+        while &r - &l > Self::one() {
+            let next = (&l + &r) >> 1;
+
+            if &next * &rhs <= self {
+                l = next;
+            } else {
+                r = next
+            }
+        }
+
+        l
     }
 
     pub fn div_ceil(self, rhs: Self) -> Self {
@@ -595,12 +645,6 @@ impl BigUint {
     }
 }
 
-impl From<u8> for BigUint {
-    fn from(value: u8) -> Self {
-        BigUint { value: vec![value] }
-    }
-}
-
 macro_rules! impl_from_unsigned_int {
     ($type: ty) => {
         impl From<$type> for BigUint {
@@ -611,11 +655,7 @@ macro_rules! impl_from_unsigned_int {
                     result.push(i);
                 }
 
-                if result.value.is_empty() {
-                    BigUint::zero()
-                } else {
-                    result
-                }
+                result
             }
         }
     };
@@ -626,7 +666,7 @@ macro_rules! impl_from_unsigned_int {
     };
 }
 
-impl_from_unsigned_int!(u16, u32, u64, u128, usize);
+impl_from_unsigned_int!(u8, u16, u32, u64, u128, usize);
 
 macro_rules! impl_try_from_signed_int {
     ($type: ty) => {
@@ -808,11 +848,7 @@ macro_rules! impl_bit_ops {
                     new.push(push);
                 }
 
-                let mut result: Vec<u8> = new.into_iter().rev().skip_while(|v: &u8| *v == 0).collect();
-
-                if result.is_empty() {
-                    result.push(0);
-                }
+                let result: Vec<u8> = new.into_iter().rev().skip_while(|v: &u8| *v == 0).collect();
 
                 BigUint { value: result }
             }
@@ -948,6 +984,10 @@ macro_rules! impl_shr_and_shl_unsigned {
             type Output = Self;
 
             fn shl(self, rhs: $type) -> Self::Output {
+                if self.is_zero() {
+                    return Self::zero()
+                }
+
                 let mut result: BigUint = self;
 
                 for _ in 0..rhs.div_ceil(8) {
@@ -1169,6 +1209,8 @@ impl Sub for BigUint {
 
     fn sub(self, rhs: Self) -> Self::Output {
         if self < rhs {
+            dbg_biguint!(self);
+            dbg_biguint!(rhs);
             panic!("attempt to subtract with overflow");
         }
 
@@ -1237,28 +1279,8 @@ impl_assign_for_ref!(MulAssign, mul_assign);
 impl Div for BigUint {
     type Output = Self;
 
-    fn div(mut self, rhs: Self) -> Self::Output {
-        if rhs.is_zero() {
-            panic!("attempt to divide by zero");
-        }
-
-        let mut result: BigUint = BigUint::zero();
-
-        while self >= rhs {
-            let mut add: BigUint = BigUint::one();
-            let mut sub: BigUint = rhs.clone();
-
-            while self >= sub {
-                self -= &sub;
-
-                result += &add;
-
-                sub <<= 1u8;
-                add <<= 1u8;
-            }
-        }
-
-        result
+    fn div(self, rhs: Self) -> Self::Output {
+        self.binary_div(rhs)
     }
 }
 
@@ -1551,6 +1573,11 @@ mod tests {
             BigUint::from_str_radix("1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", 2).unwrap() * BigUint::from(0b11u8),
             BigUint::from_str_radix("11000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", 2).unwrap()
         );
+
+        assert_eq!(
+            BigUint::from_str("1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000").unwrap() * BigUint::from_str("1000000000000000000000000000000000000000000000000").unwrap(),
+            BigUint::from_str("1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000").unwrap()
+        );
     }
 
     #[test]
@@ -1758,5 +1785,11 @@ mod tests {
             BigUint::from(2u32).pow(64),
             BigUint::from(18446744073709551616u128)
         );
+    }
+
+    #[test]
+    fn memory() {
+        let _ = BigUint::from(10u8)
+            .pow_big(BigUint::from(10u8).pow_big(BigUint::from(10u8).pow_big(BigUint::from(10u8))));
     }
 }

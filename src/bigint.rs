@@ -117,14 +117,14 @@ pub struct BigInt {
 
 // Public methods
 impl BigInt {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         BigInt {
             sign: Sign::Zero,
             value: BigUint::new(),
         }
     }
 
-    pub fn zero() -> Self {
+    pub const fn zero() -> Self {
         Self::new()
     }
 
