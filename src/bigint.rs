@@ -301,9 +301,10 @@ impl BigInt {
 
     pub fn ilog(self, base: Self) -> u32 {
         assert!(
-            base >= Self::from(2u8),
+            base <= Self::from(2u8),
             "base of integer logarithm must be at least 2"
         );
+
         self.checked_ilog(base)
             .unwrap_or_else(|| panic!("argument of integer logarithm must be positive"))
     }
@@ -451,7 +452,6 @@ impl Neg for &BigInt {
     }
 }
 
-
 impl Add for BigInt {
     type Output = Self;
 
@@ -470,7 +470,8 @@ impl Add for BigInt {
         } else {
             let value: BigUint = self.value.clone().abs_diff(rhs.value.clone());
             Self {
-                sign: std::cmp::max_by(self, rhs, |a: &BigInt, b: &BigInt| a.value.cmp(&b.value)).sign,
+                sign: std::cmp::max_by(self, rhs, |a: &BigInt, b: &BigInt| a.value.cmp(&b.value))
+                    .sign,
                 value,
             }
         }
@@ -508,9 +509,7 @@ impl Div for BigInt {
     type Output = Self;
 
     fn div(self, rhs: Self) -> Self::Output {
-        if rhs.is_zero() {
-            panic!("attempt to divide by zero");
-        }
+        assert!(!rhs.is_zero(), "attempt to divide by zero");
 
         if self.is_zero() {
             Self::zero()

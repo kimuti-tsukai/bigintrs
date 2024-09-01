@@ -14,11 +14,15 @@ use std::{
 #[allow(unused_macros)]
 macro_rules! dbg_biguint {
     ($i: expr) => {{
-        eprint!("[ {} ] = ", stringify!($i));
-        for i in &$i.value {
+        let r = $i;
+
+        eprint!("{:<43}", format!("[ {} ] =", stringify!($i)));
+        for i in &r.value {
             eprint!("{:0>8b} ", i);
         }
         eprintln!();
+        eprintln!();
+        r
     }};
 }
 
@@ -152,9 +156,16 @@ impl BigUint {
 
         let z2: BigUint = x1._karatsuba_mul(&y1);
         let z0: BigUint = x0._karatsuba_mul(&y0);
-        let z1: BigUint = (x1 + x0)._karatsuba_mul(&(y1 + y0)) - (&z2 + &z0);
+        let z1_f: BigUint = (x1 + x0)._karatsuba_mul(&(y1 + y0));
+        let z1_s: BigUint = &z2 + &z0;
 
-        (z2 << (m << 1)) + (z1 << m) + z0
+        if z1_f >= z1_s {
+            let z1: BigUint = z1_f - z1_s;
+            (z2 << (m << 1)) + z0 + (z1 << m)
+        } else {
+            let z1: BigUint = z1_s - z1_f;
+            (z2 << (m << 1)) + z0 - (z1 << m)
+        }
     }
 
     fn split(&self, mid: u32) -> (BigUint, BigUint) {
@@ -267,9 +278,7 @@ impl BigUint {
     }
 
     pub fn normal_div(mut self, rhs: Self) -> Self {
-        if rhs.is_zero() {
-            panic!("attempt to divide by zero");
-        }
+        assert!(!rhs.is_zero(), "attempt to divide by zero");
 
         let mut result: BigUint = BigUint::zero();
 
@@ -291,12 +300,10 @@ impl BigUint {
     }
 
     pub fn binary_div(self, rhs: Self) -> Self {
-        if rhs.is_zero() {
-            panic!("attempt to divide by zero");
-        }
+        assert!(!rhs.is_zero(), "attempt to divide by zero");
 
         if rhs.is_one() {
-            return self
+            return self;
         }
 
         let (mut l, mut r) = (Self::zero(), self.clone());
@@ -534,9 +541,7 @@ impl BigUint {
     }
 
     pub fn trailing_zeros(&self) -> u32 {
-        if self.is_zero() {
-            panic!("trailing zero is infinity");
-        }
+        assert!(!self.is_zero(), "trailing zero is infinity");
 
         let mut result: u32 = 0;
 
@@ -1123,9 +1128,7 @@ macro_rules! impl_shr_and_shl_signed {
             type Output = Self;
 
             fn shr(self, rhs: $type) -> Self::Output {
-                if rhs < 0 {
-                    panic!("attempt to shift right with overflow");
-                }
+                assert!(rhs >= 0, "attempt to shift right with overflow");
 
                 self >> rhs.my_cast_unsigned()
             }
@@ -1135,9 +1138,7 @@ macro_rules! impl_shr_and_shl_signed {
             type Output = Self;
 
             fn shl(self, rhs: $type) -> Self::Output {
-                if rhs < 0 {
-                    panic!("attempt to shift left with overflow");
-                }
+                assert!(rhs >= 0, "attempt to shift left with overflow");
 
                 self << rhs.my_cast_unsigned()
             }
@@ -1161,9 +1162,7 @@ macro_rules! impl_shr_and_shl_signed {
 
         impl ShrAssign<$type> for BigUint {
             fn shr_assign(&mut self, rhs: $type) {
-                if rhs < 0 {
-                    panic!("attempt to shift right with overflow");
-                }
+                assert!(rhs >= 0, "attempt to shift right with overflow");
 
                 *self >>= rhs.my_cast_unsigned();
             }
@@ -1171,9 +1170,7 @@ macro_rules! impl_shr_and_shl_signed {
 
         impl ShlAssign<$type> for BigUint {
             fn shl_assign(&mut self, rhs: $type) {
-                if rhs < 0 {
-                    panic!("attempt to shift left with overflow");
-                }
+                assert!(rhs >= 0, "attempt to shift left with overflow");
 
                 *self <<= rhs.my_cast_unsigned();
             }
@@ -1208,11 +1205,7 @@ impl Sub for BigUint {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        if self < rhs {
-            dbg_biguint!(self);
-            dbg_biguint!(rhs);
-            panic!("attempt to subtract with overflow");
-        }
+        assert!(self >= rhs, "attempt to subtract with overflow");
 
         let xor: BigUint = &self ^ &rhs;
 
