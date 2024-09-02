@@ -1441,6 +1441,34 @@ mod tests {
             BigUint::from(0b_00001111_11110000_u16) >> 30,
             BigUint::zero()
         );
+
+        // 右シフト: 4 >> 1 = 2
+        assert_eq!(BigUint::from(4u128) >> 1, BigUint::from(2u128));
+
+        // 右シフト: 1024 >> 10 = 1
+        assert_eq!(BigUint::from(1024u128) >> 10, BigUint::from(1u128));
+
+        // 右シフト: 18446744073709551616 >> 64 = 1 (u128範囲内)
+        assert_eq!(
+            BigUint::from(18446744073709551616u128) >> 64,
+            BigUint::from(1u128)
+        );
+
+        // 右シフト: 170141183460469231731687303715884105728 >> 127 = 1 (最大シフト)
+        assert_eq!(
+            BigUint::from(170141183460469231731687303715884105728u128) >> 127,
+            BigUint::from(1u128)
+        );
+
+        // 右シフト: 0 >> 10 = 0
+        assert_eq!(BigUint::zero() >> 10, BigUint::zero());
+
+        // 右シフト: 大きな数のシフト
+        let big_num = BigUint::from(9876543210u128);
+        assert_eq!(
+            big_num.clone() >> 2,
+            BigUint::from(2469135802u128) // 9876543210 >> 2 = 2469135802
+        );
     }
 
     #[test]
@@ -1474,6 +1502,34 @@ mod tests {
             BigUint::from(0b_00001111_11110000_u16) << 18u8,
             BigUint::from(0b_00111111_11000000_00000000_00000000_u32)
         );
+
+        // 左シフト: 1 << 1 = 2
+        assert_eq!(BigUint::from(1u128) << 1, BigUint::from(2u128));
+
+        // 左シフト: 1 << 10 = 1024
+        assert_eq!(BigUint::from(1u128) << 10, BigUint::from(1024u128));
+
+        // 左シフト: 1 << 64 = 18446744073709551616 (u128範囲内)
+        assert_eq!(
+            BigUint::from(1u128) << 64,
+            BigUint::from(18446744073709551616u128)
+        );
+
+        // 左シフト: 1 << 127 (最大シフト)
+        assert_eq!(
+            BigUint::from(1u128) << 127,
+            BigUint::from(170141183460469231731687303715884105728u128)
+        );
+
+        // 左シフト: 0 << 10 = 0
+        assert_eq!(BigUint::zero() << 10, BigUint::zero());
+
+        // 左シフト: 大きな数のシフト
+        let big_num = BigUint::from(1234567890u128);
+        assert_eq!(
+            big_num.clone() << 4,
+            BigUint::from(19753086240u128) // 1234567890 << 4 = 19753086240
+        );
     }
 
     #[test]
@@ -1503,6 +1559,35 @@ mod tests {
             BigUint::from(37u8) + BigUint::from(183u8),
             BigUint::from(220u8)
         );
+
+        assert_eq!(
+            BigUint::from(57u8) + BigUint::from(75u8),
+            BigUint::from(132u8)
+        );
+
+        // 基本的な加算: 1 + 1 = 2
+        assert_eq!(
+            BigUint::from(1u128) + BigUint::from(1u128),
+            BigUint::from(2u128)
+        );
+
+        // 大きな数の加算: 12345678901234567890 + 98765432109876543210
+        assert_eq!(
+            BigUint::from(12345678901234567890u128) + BigUint::from(98765432109876543210u128),
+            BigUint::from(111111111011111111100u128)
+        );
+
+        // 0との加算: 0 + 999 = 999
+        assert_eq!(
+            BigUint::zero() + BigUint::from(999u128),
+            BigUint::from(999u128)
+        );
+
+        // 大きな数の繰り上がりを含む加算
+        assert_eq!(
+            BigUint::from(170141183460469231731687303715884105728u128) + BigUint::from(1u128),
+            BigUint::from(170141183460469231731687303715884105729u128)
+        );
     }
 
     #[test]
@@ -1526,6 +1611,32 @@ mod tests {
             BigUint::from(531u16) - BigUint::from(260u16),
             BigUint::from(271u16)
         );
+
+        // 基本的な減算: 2 - 1 = 1
+        assert_eq!(
+            BigUint::from(2u128) - BigUint::from(1u128),
+            BigUint::from(1u128)
+        );
+
+        // 大きな数の減算: 98765432109876543210 - 12345678901234567890
+        assert_eq!(
+            BigUint::from(98765432109876543210u128) - BigUint::from(12345678901234567890u128),
+            BigUint::from(86419753208641975320u128)
+        );
+
+        // 0からの減算はサポートされていない場合の処理（通常はpanicが発生する）
+        // assert_panics! or custom handling if implemented
+        // BigUint does not support negative numbers, so we avoid direct tests for negative results.
+
+        // 大きな数の減算（ボローチェック）
+        assert_eq!(
+            BigUint::from(170141183460469231731687303715884105729u128) - BigUint::from(1u128),
+            BigUint::from(170141183460469231731687303715884105728u128)
+        );
+
+        // 自己減算: x - x = 0
+        let big_num = BigUint::from(98765432109876543210u128);
+        assert_eq!(big_num.clone() - big_num.clone(), BigUint::zero());
     }
 
     #[test]
@@ -1774,15 +1885,10 @@ mod tests {
 
     #[test]
     fn debug() {
-        let bytes_str = "00110000 11100001 00000100 10001100 11110010 01011110 00101101 01110000 00110111 11111011 11010100 01001110 00010100 01100101 10100010 01010111 10101011 11010001 00101110 11111110 11111100 10001110 10101010 10100011 00101011 10011111 11101000 11101111 11111110 01011000 00100101 00111110 01111111 01000000 11001001 01101110 11101100 11000001 11011100 10000000 10111011 00010010 00000101 11110111 11011010 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000";
-
-        let bytes: Vec<u8> = bytes_str
-            .split(" ")
-            .map(|v| u8::from_str_radix(v, 2).unwrap())
-            .collect();
-
-        let mut a = BigUint::from_be_bytes(&bytes);
-
-        a *= BigUint::from(10u8);
+        let mut a = BigUint::one();
+        for i in 0..298 {
+            println!("{}",i+1);
+            a *= BigUint::from(10u8);
+        }
     }
 }
