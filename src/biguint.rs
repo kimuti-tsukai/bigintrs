@@ -60,7 +60,7 @@ impl_cast_unsigned!(
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct BigUint {
-    value: Vec<u8>,
+    value: Vec<u64>,
 }
 
 impl BigUint {
@@ -187,7 +187,7 @@ impl BigUint {
         } else if (&rhs % BigUint::from(2u8)).is_one() {
             &self * self.clone().pow_big(rhs - BigUint::one())
         } else {
-            let a: BigUint = self.pow_big(rhs / BigUint::from(2u8));
+            let a: BigUint = self.pow_big(rhs >> 1);
             &a * &a
         }
     }
@@ -196,7 +196,7 @@ impl BigUint {
         BigUint { value: Vec::new() }
     }
 
-    fn push(&mut self, value: u8) {
+    fn push(&mut self, value: u64) {
         self.value.push(value)
     }
 
@@ -411,7 +411,7 @@ impl BigUint {
                 .value
                 .into_iter()
                 .rev()
-                .skip_while(|v: &u8| *v == 0)
+                .skip_while(|v: &u64| *v == 0)
                 .collect(),
         }
     }
@@ -420,14 +420,7 @@ impl BigUint {
         self
     }
 
-    pub fn from_be_bytes(bytes: &[u8]) -> Self {
-        let mut result: BigUint = BigUint::none();
-
-        for i in bytes.iter().skip_while(|&v: &&u8| *v == 0) {
-            result.push(*i)
-        }
-
-        result
+    pub fn from_be_bytes(mut bytes: &[u8]) -> Self {
     }
 
     pub fn from_le(self) -> Self {
@@ -437,8 +430,13 @@ impl BigUint {
     pub fn from_le_bytes(bytes: &[u8]) -> Self {
         let mut result: BigUint = BigUint::none();
 
-        for i in bytes.iter().rev().skip_while(|&v: &&u8| *v == 0) {
-            result.push(*i)
+        let mut v = Vec::new();
+        for i in bytes.chunks(8) {
+            if i.len() == 8 {
+                v.push(u64::from_be_bytes(<[u8;8]>::try_from(i).unwrap()));
+            } else {
+                todo!()
+            }
         }
 
         result
@@ -945,7 +943,7 @@ macro_rules! impl_shr_and_shl_unsigned {
                     return BigUint::new();
                 }
 
-                for _ in 0..rhs/8 {
+                for _ in 0..(rhs >> 3) {
                     self.value.pop();
                 }
 
@@ -969,7 +967,7 @@ macro_rules! impl_shr_and_shl_unsigned {
                             result.push((i >> rhs) + next);
                         }
 
-                        next = (i - ((i >> rhs) << rhs)) << (8 - rhs);
+                        next = i << (8 - rhs);
                     }
 
                     result
@@ -991,10 +989,12 @@ macro_rules! impl_shr_and_shl_unsigned {
                     result.push(0);
                 }
 
-                if rhs % 8 == 0 {
+                let rem = rhs % 8;
+
+                if rem == 0 {
                     result
                 } else {
-                    result >> (8 - (rhs % 8))
+                    result >> (8 - rem)
                 }
             }
         }
@@ -1044,13 +1044,13 @@ impl Shr for BigUint {
             return BigUint::new();
         }
 
-        let mut cnt: BigUint = &rhs / BigUint::from(8u8);
+        let mut cnt: BigUint = &rhs >> 3;
         while cnt > BigUint::zero() {
             self.value.pop();
             cnt.decrement();
         }
 
-        let rhs: u8 = u8::try_from(rhs % BigUint::from(8u8)).unwrap();
+        let rhs: u8 = u8::try_from(&rhs - ((&rhs >> 3) << 3)).unwrap();
 
         if rhs == 0 {
             self
