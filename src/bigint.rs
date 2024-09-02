@@ -629,7 +629,7 @@ impl UpperHex for BigInt {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     #[allow(unused_imports)]
     use super::*;
 
